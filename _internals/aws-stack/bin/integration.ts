@@ -17,6 +17,7 @@ const app = new cdk.App();
 const cdkProjectPath = '_internals/aws-stack';
 
 new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
+  buildImageFromEcr: 'ubuntu-build:v1.1.2',
   cleanUpCommands: [
     `cd ${cdkProjectPath}`,
     'npm install',
@@ -43,6 +44,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     INTEGRATION_SITE_APP: 'npx ts-node --prefer-ts-exts bin/integration-site.ts',
     SUBDOMAIN: '$CODEBUILD_RESOLVED_SOURCE_VERSION',
   },
+  projectName: 'static-site-integration',
   webhookFilters: [
     codebuild.FilterGroup.inEventOf(
       codebuild.EventAction.PULL_REQUEST_CREATED,
