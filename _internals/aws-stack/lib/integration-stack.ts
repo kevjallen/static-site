@@ -75,7 +75,8 @@ export class IntegrationStack extends Stack {
 
     this.project.addToRolePolicy(new PolicyStatement({
       resources: [
-        `arn:aws:cloudformation:${this.region}:${this.account}:stack/*`,
+        `arn:aws:cloudformation:${this.region}:${this.account}:stack/CDKToolkit/*`,
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/*`,
       ],
       actions: [
         'cloudformation:DescribeStacks',
