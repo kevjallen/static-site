@@ -1,9 +1,6 @@
 import {
   CfnOutput, RemovalPolicy, Stack, StackProps,
 } from 'aws-cdk-lib';
-
-import { Construct } from 'constructs';
-
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
@@ -12,6 +9,7 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
+import { Construct } from 'constructs';
 
 interface StaticSiteStackBaseProps extends StackProps {
   forceDestroy?: boolean
@@ -37,7 +35,6 @@ export class StaticSiteStack extends Stack {
     super(scope, id, props);
 
     const siteDomain = [props?.subdomain, props?.domainName].join('.');
-
     if (props?.domainName) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
