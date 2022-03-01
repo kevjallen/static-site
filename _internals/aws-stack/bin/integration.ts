@@ -16,7 +16,7 @@ const app = new cdk.App();
 
 const cdkProjectPath = '_internals/aws-stack';
 
-new IntegrationStack(app, 'Integration', {
+new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
   cleanUpCommands: [
     `cd ${cdkProjectPath}`,
     'npm install',
