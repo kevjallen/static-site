@@ -80,6 +80,7 @@ export class IntegrationStack extends Stack {
       ],
       actions: [
         'cloudformation:DescribeStacks',
+        'ssm:GetParameter',
       ],
     }));
   }
