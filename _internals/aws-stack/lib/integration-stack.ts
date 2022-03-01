@@ -2,6 +2,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import {
   BuildSpec, FilterGroup, IBuildImage, Project, Source,
 } from 'aws-cdk-lib/aws-codebuild';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { importBuildImageFromName } from './pipeline-stack';
 
@@ -19,6 +20,8 @@ export interface IntegrationStackProps extends StackProps {
 }
 
 export class IntegrationStack extends Stack {
+  public readonly project: Project;
+
   constructor(scope: Construct, id: string, props: IntegrationStackProps) {
     super(scope, id, props);
 
@@ -33,7 +36,7 @@ export class IntegrationStack extends Stack {
 
     const [gitHubRepoOwner, gitHubRepoName] = props.gitHubRepoFullName.split('/');
 
-    new Project(this, 'Project', {
+    this.project = new Project(this, 'Project', {
       buildSpec: BuildSpec.fromObject({
         version: '0.2',
         env: {
@@ -69,5 +72,14 @@ export class IntegrationStack extends Stack {
         webhookFilters: props.webhookFilters,
       }),
     });
+
+    this.project.addToRolePolicy(new PolicyStatement({
+      resources: [
+        `arn:aws:cloudformation:${this.region}:${this.account}:stack/*`,
+      ],
+      actions: [
+        'cloudformation:DescribeStacks',
+      ],
+    }));
   }
 }

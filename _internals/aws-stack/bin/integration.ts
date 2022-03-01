@@ -21,7 +21,8 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
   cleanUpCommands: [
     `cd ${cdkProjectPath}`,
     'npm install',
-    'npm run cdk destroy -- --app="$INTEGRATION_SITE_APP" -c subdomain="$SUBDOMAIN"',
+    'npm run cdk destroy -- --force --app="$INTEGRATION_SITE_APP"'
+      + ' -c subdomain="$SUBDOMAIN"',
   ],
   gitHubRepoFullName: 'kevjallen/static-site',
   installCommands: [
