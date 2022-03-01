@@ -2,7 +2,7 @@
   "name": "static-site",
   "version": "0.1.0",
   "bin": {
-    "static-site-pipeline": "bin/static-site-pipeline.js"
+    "pipeline": "bin/pipeline.js"
   },
   "scripts": {
     "build": "tsc",

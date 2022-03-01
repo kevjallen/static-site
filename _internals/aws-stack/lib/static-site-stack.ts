@@ -97,7 +97,7 @@ export class StaticSiteStack extends Stack {
         responseHeadersPolicy: headers || undefined,
       },
       defaultRootObject: 'index.html',
-      domainNames: siteDomain ? [siteDomain] : undefined,
+      domainNames: siteDomain !== '' ? [siteDomain] : undefined,
     });
     new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });
 

@@ -3,6 +3,7 @@ import { HeadersFrameOption, HeadersReferrerPolicy } from 'aws-cdk-lib/aws-cloud
 import { StaticSiteStackProps } from '../lib/static-site-stack';
 
 const commonSiteProps: StaticSiteStackProps = {
+  forceDestroy: true,
   responseBehaviors: {
     securityHeaders: {
       contentTypeOptions: {
@@ -28,5 +29,6 @@ const commonSiteProps: StaticSiteStackProps = {
       },
     },
   },
+  siteContentsPath: '../../_site',
 };
 export default commonSiteProps;

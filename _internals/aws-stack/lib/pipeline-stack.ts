@@ -1,21 +1,30 @@
-import { Stack, StackProps, Stage } from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
-import { IRepository, Repository } from 'aws-cdk-lib/aws-ecr';
-import {
-  PolicyDocument, PolicyStatement, Role, ServicePrincipal,
-} from 'aws-cdk-lib/aws-iam';
+import { Repository } from 'aws-cdk-lib/aws-ecr';
+
+export function importBuildImageFromName(
+  scope: Construct,
+  repoImportId: string,
+  imageName: string,
+): IBuildImage {
+  const [imageRepoName, imageTag] = imageName.split(':');
+  const imageRepo = Repository.fromRepositoryName(
+    scope,
+    repoImportId,
+    imageRepoName,
+  );
+  return LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
+}
 
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
   sourceRepo: string
   synthCommands: string[]
 
-  appStages?: Stage[]
   buildImageFromEcr?: string
   installCommands?: string[]
-  integrationStage?: Stage
   pipelineName?: string
   sourceRepoBranch?: string
   synthCommandShell?: string
@@ -29,19 +38,16 @@ export class PipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
 
-    const sourceBranch = props.sourceRepoBranch || 'master';
-
     let buildImage: IBuildImage | undefined;
-    let buildImageRepo: IRepository | undefined;
     if (props.buildImageFromEcr) {
-      const [imageRepoName, imageTag] = props.buildImageFromEcr.split(':');
-      buildImageRepo = Repository.fromRepositoryName(
+      buildImage = importBuildImageFromName(
         this,
-        'BuildImageRepository',
-        imageRepoName,
+        'BuildImageRepo',
+        props.buildImageFromEcr,
       );
-      buildImage = LinuxBuildImage.fromEcrRepository(buildImageRepo, imageTag);
     }
+
+    const sourceBranch = props.sourceRepoBranch || 'master';
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
       pipelineName: props.pipelineName,
@@ -64,36 +70,5 @@ export class PipelineStack extends Stack {
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
-
-    if (props.integrationStage) {
-      this.pipeline.addStage(props.integrationStage, {
-        post: [
-          new CodeBuildStep('CleanUp', {
-            commands: [
-              'aws cloudformation delete-stack --stack-name'
-                + `${props.integrationStage.stageName}`,
-            ],
-            role: new Role(this, 'IntegrationCleanUpRole', {
-              assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
-              inlinePolicies: {
-                default: new PolicyDocument({
-                  statements: [
-                    new PolicyStatement({
-                      resources: [
-                        `arn:aws:cloudformation:${this.region}:${this.account}`
-                          + `:stack/${props.integrationStage.stageName}`,
-                      ],
-                      actions: [
-                        'cloudformation:*',
-                      ],
-                    }),
-                  ],
-                }),
-              },
-            }),
-          }),
-        ],
-      });
-    }
   }
 }
