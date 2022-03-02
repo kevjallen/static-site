@@ -28,6 +28,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     'npx semantic-release',
   ],
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
+  gitHubTokenSecretName: 'github-token',
   installCommands: [
     '. $ASDF_SCRIPT && asdf install',
   ],

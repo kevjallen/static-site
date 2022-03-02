@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
+import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
 export function importBuildImageFromName(
   scope: Construct,
@@ -24,6 +25,7 @@ export interface PipelineStackProps extends StackProps {
   synthCommands: string[]
 
   buildImageFromEcr?: string
+  gitHubTokenSecretName?: string
   installCommands?: string[]
   pipelineName?: string
   sourceRepoBranch?: string
@@ -49,6 +51,15 @@ export class PipelineStack extends Stack {
 
     const sourceBranch = props.sourceRepoBranch || 'master';
 
+    let gitHubToken: ISecret | undefined
+    if (props.gitHubTokenSecretName) {
+      const gitHubToken = Secret.fromSecretNameV2(
+        this,
+        'GitHubToken',
+        props.gitHubTokenSecretName,
+      )
+    }
+
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
       pipelineName: props.pipelineName,
       synth: new CodeBuildStep('Synthesize', {
@@ -64,6 +75,9 @@ export class PipelineStack extends Stack {
         partialBuildSpec: BuildSpec.fromObject({
           env: {
             shell: props.synthCommandShell,
+            'secrets-manager': {
+              GITHUB_TOKEN: gitHubToken?.secretArn,
+            }
           },
         }),
         primaryOutputDirectory: props.synthOutputDir,
