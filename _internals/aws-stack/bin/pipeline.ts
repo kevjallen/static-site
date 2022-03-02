@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
+import { ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from '../lib/pipeline-stack';
 import { StaticSiteAppStage } from '../lib/static-site-app-stage';
 import commonSiteProps from './common-site-props';
@@ -41,7 +42,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
   synthOutputDir: `${cdkAppPath}/cdk.out`,
 });
 
-stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Preview', {
+const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
@@ -56,15 +57,18 @@ stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Preview', {
     },
     subdomain: 'preview',
   },
-}));
+});
+stack.pipeline.addStage(previewStage);
 
-stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Production', {
-  approvalRequired: true,
+const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
   },
-}));
+});
+stack.pipeline.addStage(productionStage, {
+  pre: [new ManualApprovalStep('ManualApproval')],
+});
 
 stack.buildPipeline();
