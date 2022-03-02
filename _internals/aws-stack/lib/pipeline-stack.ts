@@ -35,6 +35,8 @@ export interface PipelineStackProps extends StackProps {
 }
 
 export class PipelineStack extends Stack {
+  public readonly gitHubToken: ISecret | undefined;
+
   public readonly pipeline: CodePipeline;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
@@ -51,9 +53,8 @@ export class PipelineStack extends Stack {
 
     const sourceBranch = props.sourceRepoBranch || 'master';
 
-    let gitHubToken: ISecret | undefined;
     if (props.gitHubTokenSecretName) {
-      gitHubToken = Secret.fromSecretNameV2(
+      this.gitHubToken = Secret.fromSecretNameV2(
         this,
         'GitHubToken',
         props.gitHubTokenSecretName,
@@ -76,7 +77,7 @@ export class PipelineStack extends Stack {
           env: {
             shell: props.synthCommandShell,
             'secrets-manager': {
-              GITHUB_TOKEN: gitHubToken?.secretArn,
+              GITHUB_TOKEN: this.gitHubToken?.secretArn,
             },
           },
         }),
@@ -84,5 +85,12 @@ export class PipelineStack extends Stack {
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
+  }
+
+  public buildPipeline() {
+    this.pipeline.buildPipeline();
+    if (this.gitHubToken) {
+      this.gitHubToken.grantRead(this.pipeline.synthProject);
+    }
   }
 }

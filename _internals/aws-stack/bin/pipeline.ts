@@ -65,3 +65,5 @@ stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Production', {
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
   },
 }));
+
+stack.buildPipeline();
