@@ -15,6 +15,6 @@ export class StaticSiteAppStage extends Stage {
     if (props?.approvalRequired) {
       new ManualApprovalStep('ManualApproval');
     }
-    new StaticSiteStack(this, 'StaticSite', props?.siteProps);
+    new StaticSiteStack(this, 'Site', props?.siteProps);
   }
 }

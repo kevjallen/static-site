@@ -7,7 +7,7 @@ const app = new cdk.App();
 
 const integrationSubdomain = app.node.tryGetContext('subdomain');
 
-new StaticSiteStack(app, `Integration-StaticSite-${integrationSubdomain}`, {
+new StaticSiteStack(app, `StaticSite-Integration-${integrationSubdomain}`, {
   ...integrationSiteProps,
   subdomain: integrationSubdomain,
 });

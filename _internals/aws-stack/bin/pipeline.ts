@@ -39,7 +39,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
   synthOutputDir: `${cdkAppPath}/cdk.out`,
 });
 
-stack.pipeline.addStage(new StaticSiteAppStage(app, 'Preview', {
+stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Preview', {
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
@@ -56,7 +56,7 @@ stack.pipeline.addStage(new StaticSiteAppStage(app, 'Preview', {
   },
 }));
 
-stack.pipeline.addStage(new StaticSiteAppStage(app, 'Production', {
+stack.pipeline.addStage(new StaticSiteAppStage(app, 'StaticSite-Production', {
   approvalRequired: true,
   siteProps: {
     ...commonSiteProps,

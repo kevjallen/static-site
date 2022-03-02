@@ -22,7 +22,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     `cd ${cdkProjectPath}`,
     'npm install',
     'npm run cdk destroy -- --force --app="$INTEGRATION_SITE_APP"'
-      + ' -c subdomain="$SUBDOMAIN"',
+      + ' -c subdomain="$CODEBUILD_RESOLVED_SOURCE_VERSION"',
   ],
   gitHubRepoFullName: 'kevjallen/static-site',
   installCommands: [
@@ -35,15 +35,17 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     'npm install',
     'npm run lint',
     'npm run test',
-    'npm run cdk synth -- --app="$INTEGRATION_SITE_APP" -c subdomain="$SUBDOMAIN"',
-    'npm run cdk deploy -- --app="$INTEGRATION_SITE_APP" -c subdomain="$SUBDOMAIN"',
-    `curl -sf "https://$SUBDOMAIN.${integrationSiteProps.domainName}"`,
+    'npm run cdk synth -- --app="$INTEGRATION_SITE_APP"'
+      + ' -c subdomain="$CODEBUILD_RESOLVED_SOURCE_VERSION"',
+    'npm run cdk deploy -- --app="$INTEGRATION_SITE_APP"'
+      + ' -c subdomain="$CODEBUILD_RESOLVED_SOURCE_VERSION"',
+    'curl -sf "https://$CODEBUILD_RESOLVED_SOURCE_VERSION'
+      + `.${integrationSiteProps.domainName}"`,
   ],
   integrationCommandShell: 'bash',
   integrationVars: {
     ASDF_SCRIPT: '/root/.asdf/asdf.sh',
     INTEGRATION_SITE_APP: 'npx ts-node --prefer-ts-exts bin/integration-site.ts',
-    SUBDOMAIN: '$CODEBUILD_RESOLVED_SOURCE_VERSION',
   },
   projectName: 'static-site-integration',
   webhookFilters: [
