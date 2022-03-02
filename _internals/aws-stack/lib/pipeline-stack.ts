@@ -8,9 +8,9 @@ import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 export function importBuildImageFromName(
   scope: Construct,
   repoImportId: string,
-  imageName: string,
+  imageFullName: string,
 ): IBuildImage {
-  const [imageRepoName, imageTag] = imageName.split(':');
+  const [imageRepoName, imageTag] = imageFullName.split(':');
   const imageRepo = Repository.fromRepositoryName(
     scope,
     repoImportId,
@@ -70,6 +70,7 @@ export class PipelineStack extends Stack {
         commands: props.synthCommands,
         env: props.synthEnv,
         input: CodePipelineSource.connection(props.sourceRepo, sourceBranch, {
+          codeBuildCloneOutput: true,
           connectionArn: props.sourceConnectionArn,
         }),
         installCommands: props.installCommands,
