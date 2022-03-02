@@ -37,7 +37,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     'npm run test',
     'npm run cdk synth -- --app="$INTEGRATION_SITE_APP" -c subdomain="$SUBDOMAIN"',
     'npm run cdk deploy -- --app="$INTEGRATION_SITE_APP" -c subdomain="$SUBDOMAIN"',
-    `curl -f https://$SUBDOMAIN.${integrationSiteProps.domainName}`,
+    `curl -sf "https://$SUBDOMAIN.${integrationSiteProps.domainName}"`,
   ],
   integrationCommandShell: 'bash',
   integrationVars: {
