@@ -34,8 +34,12 @@ export class StaticSiteStack extends Stack {
   constructor(scope: Construct, id: string, props?: StaticSiteStackProps) {
     super(scope, id, props);
 
-    const siteDomain = [props?.subdomain, props?.domainName].join('.');
-    if (props?.domainName) {
+    let siteDomain: string | undefined = props?.domainName;
+    if (props?.subdomain && siteDomain) {
+      siteDomain = `${props.subdomain}.${siteDomain}`;
+    }
+
+    if (siteDomain) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
 
@@ -56,7 +60,7 @@ export class StaticSiteStack extends Stack {
       );
     }
 
-    if (zone && !certificate) {
+    if (siteDomain && zone && !certificate) {
       certificate = new acm.DnsValidatedCertificate(this, 'SiteCertificate', {
         domainName: siteDomain,
         region: 'us-east-1',
@@ -97,7 +101,7 @@ export class StaticSiteStack extends Stack {
         responseHeadersPolicy: headers || undefined,
       },
       defaultRootObject: 'index.html',
-      domainNames: siteDomain !== '' ? [siteDomain] : undefined,
+      domainNames: siteDomain ? [siteDomain] : undefined,
     });
     new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });
 
