@@ -51,13 +51,13 @@ export class PipelineStack extends Stack {
 
     const sourceBranch = props.sourceRepoBranch || 'master';
 
-    let gitHubToken: ISecret | undefined
+    let gitHubToken: ISecret | undefined;
     if (props.gitHubTokenSecretName) {
-      const gitHubToken = Secret.fromSecretNameV2(
+      gitHubToken = Secret.fromSecretNameV2(
         this,
         'GitHubToken',
         props.gitHubTokenSecretName,
-      )
+      );
     }
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
@@ -77,7 +77,7 @@ export class PipelineStack extends Stack {
             shell: props.synthCommandShell,
             'secrets-manager': {
               GITHUB_TOKEN: gitHubToken?.secretArn,
-            }
+            },
           },
         }),
         primaryOutputDirectory: props.synthOutputDir,
