@@ -1,42 +1,66 @@
-import { Stack, StackProps, Stage } from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
+import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
+
+export function importBuildImageFromName(
+  scope: Construct,
+  repoImportId: string,
+  imageName: string,
+): IBuildImage {
+  const [imageRepoName, imageTag] = imageName.split(':');
+  const imageRepo = Repository.fromRepositoryName(
+    scope,
+    repoImportId,
+    imageRepoName,
+  );
+  return LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
+}
 
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
   sourceRepo: string
   synthCommands: string[]
 
-  appStages?: Stage[]
-  buildImage?: string
+  buildImageFromEcr?: string
+  gitHubTokenSecretName?: string
   installCommands?: string[]
   pipelineName?: string
-  sourceBranch?: string
+  sourceRepoBranch?: string
   synthCommandShell?: string
   synthEnv?: Record<string, string>
   synthOutputDir?: string
 }
 
 export class PipelineStack extends Stack {
+  public readonly pipeline: CodePipeline;
+
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
 
-    const sourceBranch = props.sourceBranch || 'master';
-
-    let buildImage: IBuildImage;
-    if (props.buildImage) {
-      const [imageName, imageTag] = props.buildImage.split(':');
-      buildImage = LinuxBuildImage.fromEcrRepository(
-        Repository.fromRepositoryName(this, 'BuildImageRepository', imageName),
-        imageTag,
+    let buildImage: IBuildImage | undefined;
+    if (props.buildImageFromEcr) {
+      buildImage = importBuildImageFromName(
+        this,
+        'BuildImageRepo',
+        props.buildImageFromEcr,
       );
-    } else {
-      buildImage = LinuxBuildImage.STANDARD_5_0;
     }
 
-    const pipeline = new CodePipeline(this, 'Pipeline', {
+    const sourceBranch = props.sourceRepoBranch || 'master';
+
+    let gitHubToken: ISecret | undefined;
+    if (props.gitHubTokenSecretName) {
+      gitHubToken = Secret.fromSecretNameV2(
+        this,
+        'GitHubToken',
+        props.gitHubTokenSecretName,
+      );
+    }
+
+    this.pipeline = new CodePipeline(this, 'CodePipeline', {
       pipelineName: props.pipelineName,
       synth: new CodeBuildStep('Synthesize', {
         buildEnvironment: {
@@ -51,12 +75,14 @@ export class PipelineStack extends Stack {
         partialBuildSpec: BuildSpec.fromObject({
           env: {
             shell: props.synthCommandShell,
+            'secrets-manager': {
+              GITHUB_TOKEN: gitHubToken?.secretArn,
+            },
           },
         }),
         primaryOutputDirectory: props.synthOutputDir,
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
-    props.appStages?.forEach((stage) => { pipeline.addStage(stage); });
   }
 }
