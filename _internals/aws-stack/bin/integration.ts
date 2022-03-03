@@ -30,6 +30,8 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     '. $ASDF_SCRIPT && asdf install',
   ],
   integrationCommands: [
+    'git config --global user.name "codebuild"',
+    `git config --global user.email "codebuild@${integrationSiteProps.domainName}"`,
     // simulate merge into trunk branch
     'git checkout $CODEBUILD_WEBHOOK_BASE_REF',
     'git merge --no-commit --no-ff $CODEBUILD_RESOLVED_SOURCE_VERSION',
