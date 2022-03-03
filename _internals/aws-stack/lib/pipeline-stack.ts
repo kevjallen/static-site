@@ -75,6 +75,9 @@ export class PipelineStack extends Stack {
         }),
         installCommands: props.installCommands,
         partialBuildSpec: BuildSpec.fromObject({
+          artifacts: {
+            name: '$CODEBUILD_RESOLVED_SOURCE_VERSION',
+          },
           env: {
             shell: props.synthCommandShell,
             'secrets-manager': {
