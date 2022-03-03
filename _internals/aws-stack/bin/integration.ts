@@ -13,15 +13,12 @@ const integrationSiteProps: StaticSiteStackProps = {
 export default integrationSiteProps;
 
 const app = new cdk.App();
-
 const cdkProjectPath = '_internals/aws-stack';
 
 new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
   cleanUpCommands: [
     `cd ${cdkProjectPath}`,
-    'npm install',
-    // destroy live integration site
     'npm run cdk destroy -- --force --app="$INTEGRATION_SITE_APP"'
       + ' -c subdomain="$CODEBUILD_RESOLVED_SOURCE_VERSION"',
   ],
@@ -30,6 +27,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     '. $ASDF_SCRIPT && asdf install',
   ],
   integrationCommands: [
+    // user details for simulated merge
     'git config --global user.name "codebuild"',
     `git config --global user.email "codebuild@${integrationSiteProps.domainName}"`,
     // simulate merge into trunk branch
