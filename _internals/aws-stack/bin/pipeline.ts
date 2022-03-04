@@ -30,7 +30,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     'npm run cdk synth --output=$(mktemp -d) --quiet',
     `git remote set-url origin https://$GITHUB_TOKEN@github.com/${sourceRepo}.git`,
     'npx semantic-release && VERSION=$(git tag --points-at)',
-    'if [ -z "$VERSION" ]; then VERSION=$CODEBUILD_RESOLVED_SOURCE_VERSION fi',
+    'if [ -z "$VERSION" ]; then VERSION=$CODEBUILD_RESOLVED_SOURCE_VERSION; fi',
     'npm run cdk synth -- -c version=$VERSION',
   ],
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
