@@ -4,20 +4,7 @@ import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pip
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
-
-export function importBuildImageFromName(
-  scope: Construct,
-  repoImportId: string,
-  imageFullName: string,
-): IBuildImage {
-  const [imageRepoName, imageTag] = imageFullName.split(':');
-  const imageRepo = Repository.fromRepositoryName(
-    scope,
-    repoImportId,
-    imageRepoName,
-  );
-  return LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
-}
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
@@ -46,11 +33,13 @@ export class PipelineStack extends Stack {
 
     let buildImage: IBuildImage | undefined;
     if (props.buildImageFromEcr) {
-      buildImage = importBuildImageFromName(
+      const [imageRepoName, imageTag] = props.buildImageFromEcr.split(':');
+      const imageRepo = Repository.fromRepositoryName(
         this,
         'BuildImageRepo',
-        props.buildImageFromEcr,
+        imageRepoName,
       );
+      buildImage = LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
     }
 
     if (props.gitHubTokenSecretName) {
@@ -86,15 +75,22 @@ export class PipelineStack extends Stack {
         }),
         primaryOutputDirectory: props.synthOutputDir,
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
+        rolePolicyStatements: !this.gitHubToken ? [] : [
+          new PolicyStatement({
+            resources: [
+              this.gitHubToken.secretArn,
+            ],
+            actions: [
+              'secretsmanager:GetResourcePolicy',
+              'secretsmanager:GetSecretValue',
+              'secretsmanager:DescribeSecret',
+              'secretsmanager:ListSecretVersionIds',
+            ],
+          }),
+        ],
       }),
     });
-    this.version = this.node.tryGetContext('version');
-  }
 
-  public buildPipeline() {
-    this.pipeline.buildPipeline();
-    if (this.gitHubToken) {
-      this.gitHubToken.grantRead(this.pipeline.synthProject);
-    }
+    this.version = this.node.tryGetContext('version');
   }
 }

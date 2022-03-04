@@ -1,10 +1,10 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import {
-  BuildSpec, FilterGroup, IBuildImage, Project, Source,
+  BuildSpec, FilterGroup, IBuildImage, LinuxBuildImage, Project, Source,
 } from 'aws-cdk-lib/aws-codebuild';
+import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { importBuildImageFromName } from './pipeline-stack';
 
 export interface IntegrationStackProps extends StackProps {
   cleanUpCommands: string[]
@@ -27,11 +27,13 @@ export class IntegrationStack extends Stack {
 
     let buildImage: IBuildImage | undefined;
     if (props.buildImageFromEcr) {
-      buildImage = importBuildImageFromName(
+      const [imageRepoName, imageTag] = props.buildImageFromEcr.split(':');
+      const imageRepo = Repository.fromRepositoryName(
         this,
         'BuildImageRepo',
-        props.buildImageFromEcr,
+        imageRepoName,
       );
+      buildImage = LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
     }
 
     const [gitHubRepoOwner, gitHubRepoName] = props.gitHubRepoFullName.split('/');
@@ -68,7 +70,6 @@ export class IntegrationStack extends Stack {
       source: Source.gitHub({
         owner: gitHubRepoOwner,
         repo: gitHubRepoName,
-        webhook: !!props.webhookFilters,
         webhookFilters: props.webhookFilters,
       }),
     });
