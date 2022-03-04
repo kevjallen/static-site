@@ -1,4 +1,4 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Stack, StackProps, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
@@ -35,9 +35,11 @@ export interface PipelineStackProps extends StackProps {
 }
 
 export class PipelineStack extends Stack {
-  public readonly gitHubToken: ISecret | undefined;
+  private readonly gitHubToken: ISecret | undefined;
 
   public readonly pipeline: CodePipeline;
+
+  public readonly version: string | undefined;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
@@ -51,8 +53,6 @@ export class PipelineStack extends Stack {
       );
     }
 
-    const sourceBranch = props.sourceRepoBranch || 'master';
-
     if (props.gitHubTokenSecretName) {
       this.gitHubToken = Secret.fromSecretNameV2(
         this,
@@ -60,6 +60,8 @@ export class PipelineStack extends Stack {
         props.gitHubTokenSecretName,
       );
     }
+
+    const sourceBranch = props.sourceRepoBranch || 'master';
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
       pipelineName: props.pipelineName,
@@ -75,9 +77,6 @@ export class PipelineStack extends Stack {
         }),
         installCommands: props.installCommands,
         partialBuildSpec: BuildSpec.fromObject({
-          artifacts: {
-            name: '$CODEBUILD_RESOLVED_SOURCE_VERSION',
-          },
           env: {
             shell: props.synthCommandShell,
             'secrets-manager': {
@@ -89,6 +88,11 @@ export class PipelineStack extends Stack {
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
+
+    this.version = this.node.tryGetContext('version');
+    if (this.version) {
+      Tags.of(this).add('version', this.version);
+    }
   }
 
   public buildPipeline() {

@@ -13,6 +13,7 @@ const account = process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUN
 const region = process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION;
 
 const sourceConnectionId = 'bad4ffec-6d29-4b6a-bf2a-c4718648d78e';
+
 const sourceRepo = 'kevjallen/static-site';
 
 const stack = new PipelineStack(app, 'StaticSitePipeline', {
@@ -26,8 +27,11 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     'npm install',
     'npm run lint',
     'npm run test',
-    'npm run cdk synth',
+    'npm run cdk synth --output=$(mktemp -d)',
     `npx semantic-release --repositoryUrl https://github.com/${sourceRepo}.git`,
+    'VERSION=$(git tag --points-at)',
+    '[ -z "$VERSION" ] && VERSION=$CODEBUILD_RESOLVED_SOURCE_VERSION',
+    'npm run cdk synth -- -c version=$VERSION',
   ],
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
   gitHubTokenSecretName: 'github-token',
@@ -57,6 +61,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
     },
     subdomain: 'preview',
   },
+  version: stack.version,
 });
 stack.pipeline.addStage(previewStage);
 
@@ -66,6 +71,7 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
     domainName: 'site.kevjallen.com',
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
   },
+  version: stack.version,
 });
 stack.pipeline.addStage(productionStage, {
   pre: [new ManualApprovalStep('ManualApproval')],

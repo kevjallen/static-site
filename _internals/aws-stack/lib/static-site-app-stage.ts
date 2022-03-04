@@ -1,9 +1,10 @@
-import { Stage, StageProps } from 'aws-cdk-lib';
+import { Stage, StageProps, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { StaticSiteStack, StaticSiteStackProps } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
   siteProps?: StaticSiteStackProps
+  version?: string
 }
 
 export class StaticSiteAppStage extends Stage {
@@ -11,5 +12,9 @@ export class StaticSiteAppStage extends Stage {
     super(scope, id, props);
 
     new StaticSiteStack(this, 'Site', props?.siteProps);
+
+    if (props?.version) {
+      Tags.of(this).add('version', props.version);
+    }
   }
 }
