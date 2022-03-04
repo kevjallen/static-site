@@ -1,4 +1,4 @@
-import { Stack, StackProps, Tags } from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
@@ -88,11 +88,7 @@ export class PipelineStack extends Stack {
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
-
     this.version = this.node.tryGetContext('version');
-    if (this.version) {
-      Tags.of(this).add('version', this.version);
-    }
   }
 
   public buildPipeline() {
