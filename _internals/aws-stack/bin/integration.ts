@@ -38,7 +38,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     'npm install',
     'npm run lint',
     'npm run test',
-    'npm run cdk synth',
+    'npm run cdk synth -- --quiet',
     'npm run cdk deploy -- --app="$INTEGRATION_SITE_APP"'
       + ' -c subdomain="$CODEBUILD_RESOLVED_SOURCE_VERSION"',
     'curl -sf "https://$CODEBUILD_RESOLVED_SOURCE_VERSION'

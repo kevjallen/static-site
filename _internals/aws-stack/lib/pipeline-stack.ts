@@ -11,9 +11,11 @@ export interface PipelineStackProps extends StackProps {
   synthCommands: string[]
 
   buildImageFromEcr?: string
+  crossAccountKeys?: boolean
   gitHubTokenSecretName?: string
   installCommands?: string[]
   pipelineName?: string
+  publishAssetsInParallel?: boolean
   sourceRepoBranch?: string
   synthCommandShell?: string
   synthEnv?: Record<string, string>
@@ -52,7 +54,9 @@ export class PipelineStack extends Stack {
     }
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
+      crossAccountKeys: props.crossAccountKeys === true,
       pipelineName: props.pipelineName,
+      publishAssetsInParallel: props.publishAssetsInParallel === true,
       synth: new CodeBuildStep('Synthesize', {
         buildEnvironment: {
           buildImage,
@@ -80,7 +84,7 @@ export class PipelineStack extends Stack {
     this.version = this.node.tryGetContext('version');
   }
 
-  buildPipeline(): void {
+  buildPipeline() {
     this.pipeline.buildPipeline();
 
     if (this.gitHubToken) {
