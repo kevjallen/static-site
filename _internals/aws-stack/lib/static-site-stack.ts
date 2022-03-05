@@ -10,6 +10,7 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
+import { readFileSync } from 'fs';
 
 interface StaticSiteStackBaseProps extends StackProps {
   forceDestroy?: boolean
@@ -18,6 +19,7 @@ interface StaticSiteStackBaseProps extends StackProps {
     securityHeaders?: cloudfront.ResponseSecurityHeadersBehavior
   }
   siteContentsPath?: string
+  siteConfigPath?: string
 }
 
 export type StaticSiteStackProps = StaticSiteStackBaseProps & (
@@ -119,7 +121,11 @@ export class StaticSiteStack extends Stack {
         destinationBucket: bucket,
         distribution,
         distributionPaths: ['/*'],
-        sources: [deploy.Source.asset(props?.siteContentsPath)],
+        sources: (!props.siteConfigPath ? [] : [
+          deploy.Source.jsonData('config.json', readFileSync(props.siteConfigPath)),
+        ]).concat([
+          deploy.Source.asset(props.siteContentsPath),
+        ]),
       });
     }
   }

@@ -33,7 +33,7 @@ new IntegrationStack(app, 'StaticSiteIntegrationPipeline', {
     'git checkout $CODEBUILD_WEBHOOK_BASE_REF',
     'git merge --no-commit --no-ff $CODEBUILD_RESOLVED_SOURCE_VERSION',
     'bundle install',
-    'bundle exec jekyll build',
+    'bundle exec jekyll build --config _config.yml,_build.yml',
     `cd ${cdkProjectPath}`,
     'npm install',
     'npm run lint',

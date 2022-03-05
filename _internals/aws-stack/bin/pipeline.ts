@@ -22,7 +22,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
   sourceRepo,
   synthCommands: [
     'bundle install',
-    'bundle exec jekyll build',
+    'bundle exec jekyll build --config _config.yml,_build.yml',
     `cd ${cdkAppPath}`,
     'npm install',
     'npm run lint',
@@ -52,7 +52,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
     domainName: 'site.kevjallen.com',
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
     responseBehaviors: {
-      ...commonSiteProps.responseBehaviors,
+      ...commonSiteProps.responseBehaviors || {},
       customHeaders: [{
         header: 'X-Robots-Tag',
         override: false,
@@ -60,6 +60,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
       }],
     },
     subdomain: 'preview',
+    siteConfigPath: '../../_configs/preview.json',
   },
   version: stack.version,
 });
@@ -70,6 +71,7 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
+    siteConfigPath: '../../_configs/production.json',
   },
   version: stack.version,
 });
