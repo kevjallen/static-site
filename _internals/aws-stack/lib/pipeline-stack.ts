@@ -4,7 +4,6 @@ import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pip
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
@@ -42,6 +41,8 @@ export class PipelineStack extends Stack {
       buildImage = LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
     }
 
+    const sourceBranch = props.sourceRepoBranch || 'master';
+
     if (props.gitHubTokenSecretName) {
       this.gitHubToken = Secret.fromSecretNameV2(
         this,
@@ -49,8 +50,6 @@ export class PipelineStack extends Stack {
         props.gitHubTokenSecretName,
       );
     }
-
-    const sourceBranch = props.sourceRepoBranch || 'master';
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
       pipelineName: props.pipelineName,
@@ -75,22 +74,17 @@ export class PipelineStack extends Stack {
         }),
         primaryOutputDirectory: props.synthOutputDir,
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
-        rolePolicyStatements: !this.gitHubToken ? [] : [
-          new PolicyStatement({
-            resources: [
-              this.gitHubToken.secretArn,
-            ],
-            actions: [
-              'secretsmanager:GetResourcePolicy',
-              'secretsmanager:GetSecretValue',
-              'secretsmanager:DescribeSecret',
-              'secretsmanager:ListSecretVersionIds',
-            ],
-          }),
-        ],
       }),
     });
 
     this.version = this.node.tryGetContext('version');
+  }
+
+  buildPipeline(): void {
+    this.pipeline.buildPipeline();
+
+    if (this.gitHubToken) {
+      this.gitHubToken.grantRead(this.pipeline.synthProject);
+    }
   }
 }

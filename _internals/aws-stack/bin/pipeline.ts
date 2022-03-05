@@ -76,3 +76,5 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
 stack.pipeline.addStage(productionStage, {
   pre: [new ManualApprovalStep('ManualApproval')],
 });
+
+stack.buildPipeline();
