@@ -13,17 +13,18 @@ export interface ApplicationConfigBaseStageProps extends StageProps {
 }
 
 export class ApplicationConfigBaseStage extends Stage {
-  public readonly appIdExport: string;
+  public readonly appId: string;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigBaseStageProps) {
     super(scope, id, props);
 
-    const stack = new Stack(this, 'Flags');
+    const stack = new Stack(this, 'Base');
 
     const app = new CfnApplication(stack, 'Application', {
       name: props.appName,
       description: props.appDescription,
     });
+    this.appId = stack.exportValue(app.ref);
 
     new CfnConfigurationProfile(stack, 'FlagsProfile', {
       applicationId: app.ref,
@@ -31,8 +32,6 @@ export class ApplicationConfigBaseStage extends Stage {
       name: props.flagsProfileName || 'Flags',
       type: 'AWS.AppConfig.FeatureFlags',
     });
-
-    this.appIdExport = stack.exportValue(app.ref);
 
     if (props?.version) {
       Tags.of(this).add('version', props.version);

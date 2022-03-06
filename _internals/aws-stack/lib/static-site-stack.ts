@@ -3,6 +3,7 @@ import {
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import { ICachePolicy } from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -19,14 +20,27 @@ export interface FailoverBucketProps {
 }
 
 export interface AppGwOriginProps {
-  apiIdExport: string
+  apiId: string
   apiRegion: string
 }
 
+export interface AddAppGwOriginOptions {
+  originProps: AppGwOriginProps
+
+  cachePolicy?: ICachePolicy
+}
+
 export interface AppGwFailoverOriginProps {
-  apiAccount: string
   apiIdParameterName: string
   apiRegion: string
+  parameterReaderId: string
+}
+
+export interface AddAppGwOriginGroupOptions {
+  primaryOriginProps: AppGwOriginProps
+  failoverOriginProps: AppGwFailoverOriginProps
+
+  cachePolicy?: ICachePolicy
 }
 
 interface StaticSiteStackBaseProps extends StackProps {
@@ -183,49 +197,48 @@ export class StaticSiteStack extends Stack {
     }
   }
 
-  addAppGwOriginFromExport(
+  addAppGwOrigin(
     pathPattern: string,
-    props: AppGwOriginProps,
+    options: AddAppGwOriginOptions,
   ) {
     this.distribution.addBehavior(
       pathPattern,
       new HttpOrigin(
-        `${props.apiIdExport}.execute-api.${props.apiRegion}.amazonaws.com`,
+        `${options.originProps.apiId}.execute-api`
+          + `.${options.originProps.apiRegion}.amazonaws.com`,
       ),
       {
         responseHeadersPolicy: this.headers,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: options.cachePolicy,
       },
     );
   }
 
-  addAppGwOriginGroupFromExports(
+  addAppGwOriginGroup(
     pathPattern: string,
-    parameterReaderId: string,
-    primaryProps: AppGwOriginProps,
-    fallbackProps: AppGwFailoverOriginProps,
+    options: AddAppGwOriginGroupOptions,
   ) {
     const fallbackApiIdReader = new SSMParameterReader(
       this,
-      parameterReaderId,
+      options.failoverOriginProps.parameterReaderId,
       {
-        account: fallbackProps.apiAccount,
-        parameterName: fallbackProps.apiIdParameterName,
-        region: fallbackProps.apiRegion,
+        account: this.account,
+        parameterName: options.failoverOriginProps.apiIdParameterName,
+        region: options.failoverOriginProps.apiRegion,
       },
     );
-    const fallbackApiId = fallbackApiIdReader.getParameterValue();
 
     this.distribution.addBehavior(
       pathPattern,
       new OriginGroup({
         primaryOrigin: new HttpOrigin(
-          `${primaryProps.apiIdExport}.execute-api`
-            + `.${primaryProps.apiRegion}.amazonaws.com`,
+          `${options.primaryOriginProps.apiId}.execute-api`
+            + `.${options.primaryOriginProps.apiRegion}.amazonaws.com`,
         ),
         fallbackOrigin: new HttpOrigin(
-          `${fallbackApiId}.execute-api`
-            + `.${fallbackProps.apiRegion}.amazonaws.com`,
+          `${fallbackApiIdReader.getParameterValue()}.execute-api`
+            + `.${options.failoverOriginProps.apiRegion}.amazonaws.com`,
         ),
       }),
       {

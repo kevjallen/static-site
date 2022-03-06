@@ -14,9 +14,9 @@ export interface ApplicationConfigEnvStageProps extends StageProps {
 }
 
 export class ApplicationConfigEnvStage extends Stage {
-  public readonly envApiIdExport: string;
+  public readonly envApiId: string;
 
-  public readonly flagsApiIdExport: string;
+  public readonly flagsApiId: string;
 
   public readonly envApiIdFailoverParameterName: string | undefined;
 
@@ -27,17 +27,16 @@ export class ApplicationConfigEnvStage extends Stage {
 
     const config = new ApplicationConfigStack(
       this,
-      'Main',
+      'Provider',
       props.configProps,
     );
-
-    this.envApiIdExport = config.envApiIdExport;
-    this.flagsApiIdExport = config.flagsApiIdExport;
+    this.envApiId = config.envApiIdExport;
+    this.flagsApiId = config.flagsApiIdExport;
 
     if (props.configFailoverProps) {
       const configFailover = new ApplicationConfigStack(
         this,
-        'Failover',
+        'ProviderFailover',
         props.configFailoverProps,
       );
 

@@ -11,7 +11,7 @@ import { Construct } from 'constructs';
 import { readFileSync } from 'fs';
 
 export interface ApplicationConfigStackProps extends StackProps {
-  appIdExport: string
+  appId: string
   envName: string
   envProfileName: string
   layerVersionArn: string
@@ -32,7 +32,7 @@ export class ApplicationConfigStack extends Stack {
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
 
-    const appId = props.appIdExport;
+    const { appId } = props;
 
     const env = new CfnEnvironment(this, 'Environment', {
       applicationId: appId,
@@ -93,7 +93,6 @@ export class ApplicationConfigStack extends Stack {
       `${props.restApiPrefix}-env-config-api`,
       { handler: envFunction },
     );
-
     this.envApiId = envApi.restApiId;
     this.envApiIdExport = this.exportValue(envApi.restApiId);
 
@@ -115,7 +114,6 @@ export class ApplicationConfigStack extends Stack {
       `${props.restApiPrefix}-flags-config-api`,
       { handler: flagsFunction },
     );
-
     this.flagsApiId = flagsApi.restApiId;
     this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
   }

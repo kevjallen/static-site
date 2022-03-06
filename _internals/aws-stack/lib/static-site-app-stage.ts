@@ -1,6 +1,8 @@
 import {
+  Duration,
   PhysicalName, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
+import { CachePolicy, ICachePolicy } from 'aws-cdk-lib/aws-cloudfront';
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import {
@@ -9,6 +11,7 @@ import {
 } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
+  configDefaultTtl?: Duration
   envConfigOriginProps?: AppGwOriginProps
   envConfigFailoverOriginProps?: AppGwFailoverOriginProps
   flagsConfigOriginProps?: AppGwOriginProps
@@ -24,7 +27,7 @@ export class StaticSiteAppStage extends Stage {
 
     let failoverBucket: IBucket | undefined;
     if (props?.siteFailoverRegion) {
-      const siteFailover = new Stack(this, 'SiteFailover', {
+      const siteFailover = new Stack(this, 'Failover', {
         env: { region: props.siteFailoverRegion },
       });
       failoverBucket = new Bucket(siteFailover, 'SiteBucket', {
@@ -33,7 +36,7 @@ export class StaticSiteAppStage extends Stage {
       });
     }
 
-    const site = new StaticSiteStack(this, 'Site', {
+    const site = new StaticSiteStack(this, 'Main', {
       ...props?.siteProps,
       failoverBucket: !failoverBucket ? undefined : {
         bucketName: failoverBucket.bucketName,
@@ -41,34 +44,51 @@ export class StaticSiteAppStage extends Stage {
       },
     });
 
+    let configCachePolicy: ICachePolicy | undefined;
+    if (props?.envConfigOriginProps || props?.flagsConfigOriginProps) {
+      configCachePolicy = new CachePolicy(site, 'ConfigCachePolicy', {
+        defaultTtl: props.configDefaultTtl,
+      });
+    }
+
     if (props?.envConfigOriginProps) {
       if (props.envConfigFailoverOriginProps) {
-        site.addAppGwOriginGroupFromExports(
+        site.addAppGwOriginGroup(
           '/config',
-          'EnvConfigFailoverApiIdReader',
-          props.envConfigOriginProps,
-          props.envConfigFailoverOriginProps,
+          {
+            primaryOriginProps: props.envConfigOriginProps,
+            failoverOriginProps: props.envConfigFailoverOriginProps,
+            cachePolicy: configCachePolicy,
+          },
         );
       } else {
-        site.addAppGwOriginFromExport(
+        site.addAppGwOrigin(
           '/config',
-          props.envConfigOriginProps,
+          {
+            originProps: props.envConfigOriginProps,
+            cachePolicy: configCachePolicy,
+          },
         );
       }
     }
 
     if (props?.flagsConfigOriginProps) {
       if (props.flagsConfigFailoverOriginProps) {
-        site.addAppGwOriginGroupFromExports(
+        site.addAppGwOriginGroup(
           '/flags',
-          'FlagsConfigFailoverApiIdReader',
-          props.flagsConfigOriginProps,
-          props.flagsConfigFailoverOriginProps,
+          {
+            primaryOriginProps: props.flagsConfigOriginProps,
+            failoverOriginProps: props.flagsConfigFailoverOriginProps,
+            cachePolicy: configCachePolicy,
+          },
         );
       } else {
-        site.addAppGwOriginFromExport(
+        site.addAppGwOrigin(
           '/flags',
-          props.flagsConfigOriginProps,
+          {
+            originProps: props.flagsConfigOriginProps,
+            cachePolicy: configCachePolicy,
+          },
         );
       }
     }
