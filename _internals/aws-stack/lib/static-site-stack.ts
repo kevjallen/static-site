@@ -208,6 +208,7 @@ export class StaticSiteStack extends Stack {
       this,
       parameterReaderId,
       {
+        account: this.account,
         parameterName: fallbackProps.apiIdParameterName,
         region: fallbackProps.apiRegion,
       },
