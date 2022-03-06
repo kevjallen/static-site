@@ -125,8 +125,8 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
     apiRegion: primaryEnv.region,
   },
   envConfigFailoverOriginProps:
-    !previewConfigStage.envApiFailoverIdExport ? undefined : {
-      apiIdExport: previewConfigStage.envApiFailoverIdExport,
+    !previewConfigStage.envApiIdFailoverParameterName ? undefined : {
+      apiIdParameterName: previewConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
   flagsConfigOriginProps: {
@@ -134,8 +134,8 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
     apiRegion: primaryEnv.region,
   },
   flagsConfigFailoverOriginProps:
-    !previewConfigStage.flagsApiFailoverIdExport ? undefined : {
-      apiIdExport: previewConfigStage.flagsApiFailoverIdExport,
+    !previewConfigStage.flagsApiIdFailoverParameterName ? undefined : {
+      apiIdParameterName: previewConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
   siteFailoverRegion: secondaryEnv.region,
@@ -195,8 +195,8 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite',
     apiRegion: primaryEnv.region,
   },
   envConfigFailoverOriginProps:
-    !productionConfigStage.envApiFailoverIdExport ? undefined : {
-      apiIdExport: productionConfigStage.envApiFailoverIdExport,
+    !productionConfigStage.envApiIdFailoverParameterName ? undefined : {
+      apiIdParameterName: productionConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
   flagsConfigOriginProps: {
@@ -204,8 +204,8 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite',
     apiRegion: primaryEnv.region,
   },
   flagsConfigFailoverOriginProps:
-    !productionConfigStage.flagsApiFailoverIdExport ? undefined : {
-      apiIdExport: productionConfigStage.flagsApiFailoverIdExport,
+    !productionConfigStage.flagsApiIdFailoverParameterName ? undefined : {
+      apiIdParameterName: productionConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
   siteFailoverRegion: secondaryEnv.region,

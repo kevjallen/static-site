@@ -1,6 +1,8 @@
 import {
+  PhysicalName,
   Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { ApplicationConfigStack, ApplicationConfigStackProps } from './app-config-stack';
 
@@ -16,9 +18,9 @@ export class ApplicationConfigEnvStage extends Stage {
 
   public readonly flagsApiIdExport: string;
 
-  public readonly envApiFailoverIdExport: string | undefined;
+  public readonly envApiIdFailoverParameterName: string | undefined;
 
-  public readonly flagsApiFailoverIdExport: string | undefined;
+  public readonly flagsApiIdFailoverParameterName: string | undefined;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigEnvStageProps) {
     super(scope, id, props);
@@ -39,8 +41,27 @@ export class ApplicationConfigEnvStage extends Stage {
         props.configFailoverProps,
       );
 
-      this.envApiFailoverIdExport = configFailover.envApiIdExport;
-      this.flagsApiFailoverIdExport = configFailover.flagsApiIdExport;
+      const envApiIdFailoverParameter = new StringParameter(
+        configFailover,
+        'EnvApiFailoverParameter',
+        {
+          parameterName: PhysicalName.GENERATE_IF_NEEDED,
+          simpleName: true,
+          stringValue: configFailover.envApiId,
+        },
+      );
+      this.envApiIdFailoverParameterName = envApiIdFailoverParameter.parameterName;
+
+      const flagsApiIdFailoverParameter = new StringParameter(
+        configFailover,
+        'FlagsApiFailoverParameter',
+        {
+          parameterName: PhysicalName.GENERATE_IF_NEEDED,
+          simpleName: true,
+          stringValue: configFailover.flagsApiId,
+        },
+      );
+      this.flagsApiIdFailoverParameterName = flagsApiIdFailoverParameter.parameterName;
     }
 
     if (props?.version) {

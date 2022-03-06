@@ -21,7 +21,11 @@ export interface ApplicationConfigStackProps extends StackProps {
 }
 
 export class ApplicationConfigStack extends Stack {
+  public readonly envApiId: string;
+
   public readonly envApiIdExport: string;
+
+  public readonly flagsApiId: string;
 
   public readonly flagsApiIdExport: string;
 
@@ -90,6 +94,7 @@ export class ApplicationConfigStack extends Stack {
       { handler: envFunction },
     );
 
+    this.envApiId = envApi.restApiId;
     this.envApiIdExport = this.exportValue(envApi.restApiId);
 
     const flagsFunction = new Function(this, 'FlagsFunction', {
@@ -111,6 +116,7 @@ export class ApplicationConfigStack extends Stack {
       { handler: flagsFunction },
     );
 
+    this.flagsApiId = flagsApi.restApiId;
     this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
   }
 }

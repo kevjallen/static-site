@@ -11,6 +11,7 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
+import SSMParameterReader from './ssm-param-reader';
 
 export interface FailoverBucketProps {
   bucketName: string
@@ -19,6 +20,11 @@ export interface FailoverBucketProps {
 
 export interface AppGwOriginProps {
   apiIdExport: string
+  apiRegion: string
+}
+
+export interface AppGwFailoverOriginProps {
+  apiIdParameterName: string
   apiRegion: string
 }
 
@@ -194,9 +200,20 @@ export class StaticSiteStack extends Stack {
 
   addAppGwOriginGroupFromExports(
     pathPattern: string,
+    parameterReaderId: string,
     primaryProps: AppGwOriginProps,
-    fallbackProps: AppGwOriginProps,
+    fallbackProps: AppGwFailoverOriginProps,
   ) {
+    const fallbackApiIdReader = new SSMParameterReader(
+      this,
+      parameterReaderId,
+      {
+        parameterName: fallbackProps.apiIdParameterName,
+        region: fallbackProps.apiRegion,
+      },
+    );
+    const fallbackApiId = fallbackApiIdReader.getParameterValue();
+
     this.distribution.addBehavior(
       pathPattern,
       new OriginGroup({
@@ -205,7 +222,7 @@ export class StaticSiteStack extends Stack {
             + `.${primaryProps.apiRegion}.amazonaws.com`,
         ),
         fallbackOrigin: new HttpOrigin(
-          `${fallbackProps.apiIdExport}.execute-api`
+          `${fallbackApiId}.execute-api`
             + `.${fallbackProps.apiRegion}.amazonaws.com`,
         ),
       }),

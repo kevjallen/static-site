@@ -4,14 +4,15 @@ import {
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import {
-  AppGwOriginProps, StaticSiteStack, StaticSiteStackProps, getBucketProps,
+  AppGwOriginProps, AppGwFailoverOriginProps, StaticSiteStack,
+  StaticSiteStackProps, getBucketProps,
 } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
   envConfigOriginProps?: AppGwOriginProps
-  envConfigFailoverOriginProps?: AppGwOriginProps
+  envConfigFailoverOriginProps?: AppGwFailoverOriginProps
   flagsConfigOriginProps?: AppGwOriginProps
-  flagsConfigFailoverOriginProps?: AppGwOriginProps
+  flagsConfigFailoverOriginProps?: AppGwFailoverOriginProps
   siteFailoverRegion?: string
   siteProps?: StaticSiteStackProps
   version?: string
@@ -26,7 +27,6 @@ export class StaticSiteAppStage extends Stage {
       const siteFailover = new Stack(this, 'SiteFailover', {
         env: { region: props.siteFailoverRegion },
       });
-
       failoverBucket = new Bucket(siteFailover, 'SiteBucket', {
         ...getBucketProps(props.siteProps),
         bucketName: PhysicalName.GENERATE_IF_NEEDED,
@@ -45,6 +45,7 @@ export class StaticSiteAppStage extends Stage {
       if (props.envConfigFailoverOriginProps) {
         site.addAppGwOriginGroupFromExports(
           '/config',
+          'EnvConfigFailoverApiIdReader',
           props.envConfigOriginProps,
           props.envConfigFailoverOriginProps,
         );
@@ -60,6 +61,7 @@ export class StaticSiteAppStage extends Stage {
       if (props.flagsConfigFailoverOriginProps) {
         site.addAppGwOriginGroupFromExports(
           '/flags',
+          'FlagsConfigFailoverApiIdReader',
           props.flagsConfigOriginProps,
           props.flagsConfigFailoverOriginProps,
         );
