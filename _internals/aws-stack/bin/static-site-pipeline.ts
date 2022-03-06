@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import { ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from '../lib/pipeline-stack';
 import { StaticSiteAppStage } from '../lib/static-site-app-stage';
-import { ApplicationConfigSetupStage } from '../lib/app-config-setup-stage';
+import { ApplicationConfigStage } from '../lib/app-config-stage';
 import commonSiteProps from './common-site-props';
 
 const app = new cdk.App();
@@ -67,11 +67,15 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
 const setupWave = stack.pipeline.addWave('StaticSite-Setup');
 
 configEnvs.map((configEnv) => setupWave.addStage(
-  new ApplicationConfigSetupStage(app, configEnv.description, {
-    appDescription: 'static-site runtime configuration',
-    appName: 'static-site',
-    env: configEnv,
-  }),
+  new ApplicationConfigStage(
+    app,
+    `StaticSite-Common-${configEnv.description}`,
+    {
+      appDescription: 'static-site runtime configuration',
+      appName: 'static-site',
+      env: configEnv,
+    },
+  ),
 ));
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {

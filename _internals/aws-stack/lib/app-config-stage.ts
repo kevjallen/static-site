@@ -4,15 +4,16 @@ import {
 import { CfnApplication, CfnConfigurationProfile } from 'aws-cdk-lib/aws-appconfig';
 import { Construct } from 'constructs';
 
-export interface ApplicationConfigSetupStageProps extends StageProps {
+export interface ApplicationConfigStageProps extends StageProps {
   appName: string
 
   appDescription?: string
+  flagsProfileName?: string
   version?: string
 }
 
-export class ApplicationConfigSetupStage extends Stage {
-  constructor(scope: Construct, id: string, props: ApplicationConfigSetupStageProps) {
+export class ApplicationConfigStage extends Stage {
+  constructor(scope: Construct, id: string, props: ApplicationConfigStageProps) {
     super(scope, id, props);
 
     const stack = new Stack(this, 'Config');
@@ -25,7 +26,7 @@ export class ApplicationConfigSetupStage extends Stage {
     new CfnConfigurationProfile(stack, 'FlagsProfile', {
       applicationId: application.ref,
       locationUri: 'hosted',
-      name: 'Flags',
+      name: props.flagsProfileName || 'Flags',
       type: 'AWS.AppConfig.FeatureFlags',
     });
 
