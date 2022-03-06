@@ -90,8 +90,6 @@ const secondaryConfigStage = new ApplicationConfigBaseStage(
 );
 setupWave.addStage(secondaryConfigStage);
 
-const previewWave = stack.pipeline.addWave('StaticSite-Preview');
-
 const previewConfigProps = {
   envName: 'Preview',
   envProfileName: 'Preview',
@@ -117,7 +115,7 @@ const previewConfigStage = new ApplicationConfigEnvStage(
     env: primaryEnv,
   },
 );
-previewWave.addStage(previewConfigStage);
+stack.pipeline.addStage(previewConfigStage);
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
   envConfigOriginProps: {
@@ -158,11 +156,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
   version: stack.version,
   env: primaryEnv,
 });
-previewWave.addStage(previewStage);
-
-const productionWave = stack.pipeline.addWave('StaticSite-Production', {
-  pre: [new ManualApprovalStep('ManualApproval')],
-});
+stack.pipeline.addStage(previewStage);
 
 const productionConfigProps = {
   envName: 'Production',
@@ -189,7 +183,9 @@ const productionConfigStage = new ApplicationConfigEnvStage(
     env: primaryEnv,
   },
 );
-productionWave.addStage(productionConfigStage);
+stack.pipeline.addStage(productionConfigStage, {
+  pre: [new ManualApprovalStep('ManualApproval')],
+});
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite', {
   envConfigOriginProps: {
@@ -221,6 +217,6 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite',
   version: stack.version,
   env: primaryEnv,
 });
-productionWave.addStage(productionStage);
+stack.pipeline.addStage(productionStage);
 
 stack.buildPipeline();

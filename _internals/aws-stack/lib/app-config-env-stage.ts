@@ -27,7 +27,7 @@ export class ApplicationConfigEnvStage extends Stage {
 
     const config = new ApplicationConfigStack(
       this,
-      'Config',
+      'Main',
       props.configProps,
     );
 
@@ -37,7 +37,7 @@ export class ApplicationConfigEnvStage extends Stage {
     if (props.configFailoverProps) {
       const configFailover = new ApplicationConfigStack(
         this,
-        'ConfigFailover',
+        'Failover',
         props.configFailoverProps,
       );
 
