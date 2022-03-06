@@ -2,9 +2,10 @@ import {
   Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
 import { CfnApplication, CfnConfigurationProfile } from 'aws-cdk-lib/aws-appconfig';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
-export interface ApplicationConfigStageProps extends StageProps {
+export interface ApplicationConfigBaseStageProps extends StageProps {
   appName: string
 
   appDescription?: string
@@ -12,22 +13,31 @@ export interface ApplicationConfigStageProps extends StageProps {
   version?: string
 }
 
-export class ApplicationConfigStage extends Stage {
-  constructor(scope: Construct, id: string, props: ApplicationConfigStageProps) {
+export class ApplicationConfigBaseStage extends Stage {
+  public readonly configAppIdParameterName: string;
+
+  constructor(scope: Construct, id: string, props: ApplicationConfigBaseStageProps) {
     super(scope, id, props);
 
     const stack = new Stack(this, 'Flags');
 
-    const application = new CfnApplication(stack, 'Application', {
+    const app = new CfnApplication(stack, 'Application', {
       name: props.appName,
       description: props.appDescription,
     });
 
     new CfnConfigurationProfile(stack, 'FlagsProfile', {
-      applicationId: application.ref,
+      applicationId: app.ref,
       locationUri: 'hosted',
       name: props.flagsProfileName || 'Flags',
       type: 'AWS.AppConfig.FeatureFlags',
+    });
+
+    this.configAppIdParameterName = `${props.appName}-config-app-id`;
+
+    new StringParameter(stack, 'ConfigAppIdParameter', {
+      parameterName: this.configAppIdParameterName,
+      stringValue: app.ref,
     });
 
     if (props?.version) {

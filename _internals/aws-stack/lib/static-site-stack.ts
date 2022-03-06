@@ -45,6 +45,8 @@ export function getBucketProps(siteProps?: StaticSiteStackProps) {
 }
 
 export class StaticSiteStack extends Stack {
+  private readonly headers: cloudfront.ResponseHeadersPolicy | undefined;
+
   public readonly distribution: cloudfront.Distribution;
 
   constructor(scope: Construct, id: string, props?: StaticSiteStackProps) {
@@ -54,6 +56,7 @@ export class StaticSiteStack extends Stack {
     if (props?.subdomain && siteDomain) {
       siteDomain = `${props.subdomain}.${siteDomain}`;
     }
+
     if (siteDomain) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
@@ -96,9 +99,8 @@ export class StaticSiteStack extends Stack {
     }));
     new CfnOutput(this, 'BucketName', { value: siteBucket.bucketName });
 
-    let headers: cloudfront.IResponseHeadersPolicy | undefined;
     if (props?.responseBehaviors) {
-      headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteHeaders', {
+      this.headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteHeaders', {
         customHeadersBehavior: {
           customHeaders: props?.responseBehaviors?.customHeaders || [],
         },
@@ -120,13 +122,16 @@ export class StaticSiteStack extends Stack {
           region: props.failoverBucket.bucketRegion,
         },
       );
+
       const fallbackOrigin = new origins.S3Origin(failoverBucket, {
         originAccessIdentity: oai,
       });
+
       originGroup = new origins.OriginGroup({
         primaryOrigin,
         fallbackOrigin,
       });
+
       if (props?.siteContentsPath) {
         new deploy.BucketDeployment(this, 'FailoverSiteDeployment', {
           destinationBucket: failoverBucket,
@@ -140,7 +145,7 @@ export class StaticSiteStack extends Stack {
       defaultBehavior: {
         origin: originGroup || primaryOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        responseHeadersPolicy: headers,
+        responseHeadersPolicy: this.headers,
       },
       defaultRootObject: 'index.html',
       domainNames: siteDomain ? [siteDomain] : undefined,
@@ -164,5 +169,16 @@ export class StaticSiteStack extends Stack {
         sources: [deploy.Source.asset(props.siteContentsPath)],
       });
     }
+  }
+
+  addOrigin(pathPattern: string, origin: cloudfront.IOrigin) {
+    this.distribution.addBehavior(
+      pathPattern,
+      origin,
+      {
+        responseHeadersPolicy: this.headers,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+    );
   }
 }

@@ -3,7 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import { ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from '../lib/pipeline-stack';
 import { StaticSiteAppStage } from '../lib/static-site-app-stage';
-import { ApplicationConfigStage } from '../lib/app-config-stage';
+import { ApplicationConfigBaseStage } from '../lib/app-config-base-stage';
 import commonSiteProps from './common-site-props';
 
 const app = new cdk.App();
@@ -12,20 +12,19 @@ const cdkAppPath = '_internals/aws-stack';
 
 const primaryEnv = {
   account: app.node.tryGetContext('mainAccountId'),
+  appConfigLambdaLayer:
+    'arn:aws:lambda:us-east-2:728743619870:layer:AWS-AppConfig-Extension:47',
   description: 'Ohio',
   region: 'us-east-2',
 };
 
 const secondaryEnv = {
   account: app.node.tryGetContext('mainAccountId'),
+  appConfigLambdaLayer:
+    'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:61',
   description: 'Virginia',
   region: 'us-east-1',
 };
-
-const configEnvs = [
-  primaryEnv,
-  secondaryEnv,
-];
 
 const sourceConnectionId = 'bad4ffec-6d29-4b6a-bf2a-c4718648d78e';
 
@@ -66,19 +65,45 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
 
 const setupWave = stack.pipeline.addWave('StaticSite-Setup');
 
-configEnvs.map((configEnv) => setupWave.addStage(
-  new ApplicationConfigStage(
-    app,
-    `StaticSite-Config-${configEnv.description}`,
-    {
-      appDescription: 'static-site runtime configuration',
-      appName: 'static-site',
-      env: configEnv,
-    },
-  ),
-));
+const primaryConfigStage = new ApplicationConfigBaseStage(
+  app,
+  `StaticSite-Config-${primaryEnv.description}`,
+  {
+    appDescription: 'static-site runtime configuration',
+    appName: 'static-site',
+    env: primaryEnv,
+  },
+);
+setupWave.addStage(primaryConfigStage);
+
+const secondaryConfigStage = new ApplicationConfigBaseStage(
+  app,
+  `StaticSite-Config-${secondaryEnv.description}`,
+  {
+    appDescription: 'static-site runtime configuration',
+    appName: 'static-site',
+    env: primaryEnv,
+  },
+);
+setupWave.addStage(secondaryConfigStage);
+
+const previewConfigProps = {
+  envName: 'Preview',
+  envProfileName: 'Preview',
+  restApiPrefix: 'static-site-preview',
+};
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
+  configProps: {
+    ...previewConfigProps,
+    configAppIdParameterName: primaryConfigStage.configAppIdParameterName,
+    layerVersionArn: primaryEnv.appConfigLambdaLayer,
+  },
+  configFailoverProps: {
+    ...previewConfigProps,
+    configAppIdParameterName: secondaryConfigStage.configAppIdParameterName,
+    layerVersionArn: secondaryEnv.appConfigLambdaLayer,
+  },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
     ...commonSiteProps,
@@ -99,7 +124,23 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
 });
 stack.pipeline.addStage(previewStage);
 
+const productionConfigProps = {
+  envName: 'Production',
+  envProfileName: 'Production',
+  restApiPrefix: 'static-site-production',
+};
+
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
+  configProps: {
+    ...productionConfigProps,
+    configAppIdParameterName: primaryConfigStage.configAppIdParameterName,
+    layerVersionArn: primaryEnv.appConfigLambdaLayer,
+  },
+  configFailoverProps: {
+    ...productionConfigProps,
+    configAppIdParameterName: secondaryConfigStage.configAppIdParameterName,
+    layerVersionArn: secondaryEnv.appConfigLambdaLayer,
+  },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
     ...commonSiteProps,
