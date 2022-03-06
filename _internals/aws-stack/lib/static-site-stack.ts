@@ -96,14 +96,6 @@ export class StaticSiteStack extends Stack {
     }));
     new CfnOutput(this, 'BucketName', { value: siteBucket.bucketName });
 
-    let failoverBucket: s3.IBucket | undefined;
-    if (props?.failoverBucket) {
-      failoverBucket = s3.Bucket.fromBucketAttributes(this, 'FailoverSiteBucket', {
-        bucketName: props.failoverBucket.bucketName,
-        region: props.failoverBucket.bucketRegion,
-      });
-    }
-
     let headers: cloudfront.IResponseHeadersPolicy | undefined;
     if (props?.responseBehaviors) {
       headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteHeaders', {
@@ -119,7 +111,15 @@ export class StaticSiteStack extends Stack {
     });
 
     let originGroup: origins.OriginGroup | undefined;
-    if (failoverBucket) {
+    if (props?.failoverBucket) {
+      const failoverBucket = s3.Bucket.fromBucketAttributes(
+        this,
+        'FailoverSiteBucket',
+        {
+          bucketName: props.failoverBucket.bucketName,
+          region: props.failoverBucket.bucketRegion,
+        },
+      );
       const fallbackOrigin = new origins.S3Origin(failoverBucket, {
         originAccessIdentity: oai,
       });
@@ -127,6 +127,12 @@ export class StaticSiteStack extends Stack {
         primaryOrigin,
         fallbackOrigin,
       });
+      if (props?.siteContentsPath) {
+        new deploy.BucketDeployment(this, 'SiteDeployment', {
+          destinationBucket: failoverBucket,
+          sources: [deploy.Source.asset(props.siteContentsPath)],
+        });
+      }
     }
 
     this.distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
