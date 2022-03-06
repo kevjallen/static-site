@@ -128,7 +128,7 @@ export class StaticSiteStack extends Stack {
         fallbackOrigin,
       });
       if (props?.siteContentsPath) {
-        new deploy.BucketDeployment(this, 'SiteDeployment', {
+        new deploy.BucketDeployment(this, 'FailoverSiteDeployment', {
           destinationBucket: failoverBucket,
           sources: [deploy.Source.asset(props.siteContentsPath)],
         });
