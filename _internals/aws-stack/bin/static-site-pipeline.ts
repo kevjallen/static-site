@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import { ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from '../lib/pipeline-stack';
 import { StaticSiteAppStage } from '../lib/static-site-app-stage';
+import { ApplicationConfigSetupStage } from '../lib/app-config-setup-stage';
 import commonSiteProps from './common-site-props';
 
 const app = new cdk.App();
@@ -11,13 +12,20 @@ const cdkAppPath = '_internals/aws-stack';
 
 const primaryEnv = {
   account: app.node.tryGetContext('mainAccountId'),
+  description: 'Ohio',
   region: 'us-east-2',
 };
 
 const secondaryEnv = {
   account: app.node.tryGetContext('mainAccountId'),
+  description: 'Virginia',
   region: 'us-east-1',
 };
+
+const configEnvs = [
+  primaryEnv,
+  secondaryEnv,
+];
 
 const sourceConnectionId = 'bad4ffec-6d29-4b6a-bf2a-c4718648d78e';
 
@@ -35,7 +43,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     'npm install',
     'npm run lint',
     'npm run test',
-    'npm run cdk synth -- --output=$(mktemp -d) -c mainAccountId=$ACCOUNT_ID --quiet ',
+    'npm run cdk synth -- --output=$(mktemp -d) -c mainAccountId=$ACCOUNT_ID --quiet',
     `git remote set-url origin https://$GITHUB_TOKEN@github.com/${sourceRepo}.git`,
     'npx semantic-release && VERSION=$(git tag --points-at)',
     'if [ -z "$VERSION" ]; then VERSION=$CODEBUILD_RESOLVED_SOURCE_VERSION; fi',
@@ -55,6 +63,16 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
   synthOutputDir: `${cdkAppPath}/cdk.out`,
   env: primaryEnv,
 });
+
+const setupWave = stack.pipeline.addWave('StaticSite-Setup');
+
+configEnvs.map((configEnv) => setupWave.addStage(
+  new ApplicationConfigSetupStage(app, configEnv.description, {
+    appDescription: 'static-site runtime configuration',
+    appName: 'static-site',
+    env: configEnv,
+  }),
+));
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
   siteFailoverRegion: secondaryEnv.region,

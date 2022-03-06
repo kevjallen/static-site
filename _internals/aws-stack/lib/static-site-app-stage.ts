@@ -17,7 +17,7 @@ export class StaticSiteAppStage extends Stage {
 
     let failoverBucket: IBucket | undefined;
     if (props?.siteFailoverRegion) {
-      const failoverStack = new Stack(this, 'Failover', {
+      const failoverStack = new Stack(this, 'SiteFailover', {
         env: { region: props.siteFailoverRegion },
       });
       failoverBucket = new Bucket(failoverStack, 'SiteBucket', {
