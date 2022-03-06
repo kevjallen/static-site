@@ -2,7 +2,6 @@ import {
   Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
 import { CfnApplication, CfnConfigurationProfile } from 'aws-cdk-lib/aws-appconfig';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
 export interface ApplicationConfigBaseStageProps extends StageProps {
@@ -14,7 +13,7 @@ export interface ApplicationConfigBaseStageProps extends StageProps {
 }
 
 export class ApplicationConfigBaseStage extends Stage {
-  public readonly configAppIdParameterName: string;
+  public readonly appIdExport: string;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigBaseStageProps) {
     super(scope, id, props);
@@ -33,12 +32,7 @@ export class ApplicationConfigBaseStage extends Stage {
       type: 'AWS.AppConfig.FeatureFlags',
     });
 
-    this.configAppIdParameterName = `${props.appName}-config-app-id`;
-
-    new StringParameter(stack, 'ConfigAppIdParameter', {
-      parameterName: this.configAppIdParameterName,
-      stringValue: app.ref,
-    });
+    this.appIdExport = stack.exportValue(app.ref);
 
     if (props?.version) {
       Tags.of(this).add('version', props.version);

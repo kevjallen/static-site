@@ -1,9 +1,10 @@
 import {
-  CfnOutput, RemovalPolicy, Stack, StackProps,
+  CfnOutput, Fn, RemovalPolicy, Stack, StackProps,
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
@@ -11,9 +12,14 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 
-interface FailoverBucketProps {
+export interface FailoverBucketProps {
   bucketName: string
   bucketRegion: string
+}
+
+export interface AppGwOriginProps {
+  apiIdExport: string
+  apiRegion: string
 }
 
 interface StaticSiteStackBaseProps extends StackProps {
@@ -171,10 +177,40 @@ export class StaticSiteStack extends Stack {
     }
   }
 
-  addOrigin(pathPattern: string, origin: cloudfront.IOrigin) {
+  addAppGwOriginFromExport(
+    pathPattern: string,
+    props: AppGwOriginProps,
+  ) {
+    const id = Fn.importValue(props.apiIdExport);
     this.distribution.addBehavior(
       pathPattern,
-      origin,
+      new HttpOrigin(
+        `${id}.execute-api.${props.apiRegion}.amazonaws.com`,
+      ),
+      {
+        responseHeadersPolicy: this.headers,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+    );
+  }
+
+  addAppGwOriginGroupFromExports(
+    pathPattern: string,
+    primaryProps: AppGwOriginProps,
+    fallbackProps: AppGwOriginProps,
+  ) {
+    const primaryId = Fn.importValue(primaryProps.apiIdExport);
+    const fallbackId = Fn.importValue(fallbackProps.apiIdExport);
+    this.distribution.addBehavior(
+      pathPattern,
+      new OriginGroup({
+        primaryOrigin: new HttpOrigin(
+          `${primaryId}.execute-api.${primaryProps.apiRegion}.amazonaws.com`,
+        ),
+        fallbackOrigin: new HttpOrigin(
+          `${fallbackId}.execute-api.${fallbackProps.apiRegion}.amazonaws.com`,
+        ),
+      }),
       {
         responseHeadersPolicy: this.headers,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,

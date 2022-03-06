@@ -1,16 +1,17 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
+import {
+  Fn, Stack, StackProps,
+} from 'aws-cdk-lib';
 import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
 import { CfnConfigurationProfile, CfnEnvironment } from 'aws-cdk-lib/aws-appconfig';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
   Code, Function, LayerVersion, Runtime,
 } from 'aws-cdk-lib/aws-lambda';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { readFileSync } from 'fs';
 
 export interface ApplicationConfigStackProps extends StackProps {
-  configAppIdParameterName: string
+  appIdExport: string
   envName: string
   envProfileName: string
   layerVersionArn: string
@@ -20,26 +21,22 @@ export interface ApplicationConfigStackProps extends StackProps {
 }
 
 export class ApplicationConfigStack extends Stack {
-  public readonly envApiDomain: string;
+  public readonly envApiIdExport: string;
 
-  public readonly flagsApiDomain: string;
+  public readonly flagsApiIdExport: string;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
 
-    const configAppId = StringParameter.fromStringParameterName(
-      this,
-      'AppIdParameter',
-      props.configAppIdParameterName,
-    );
+    const appId = Fn.importValue(props.appIdExport);
 
     const env = new CfnEnvironment(this, 'Environment', {
-      applicationId: configAppId.stringValue,
+      applicationId: appId,
       name: props.envName,
     });
 
     new CfnConfigurationProfile(this, 'Profile', {
-      applicationId: configAppId.stringValue,
+      applicationId: appId,
       locationUri: 'hosted',
       name: props.envProfileName,
       type: 'AWS.Freeform',
@@ -66,7 +63,7 @@ export class ApplicationConfigStack extends Stack {
       ],
       resources: [
         `arn:aws:appconfig:${this.region}:${this.account}:`
-          + `application/${configAppId.stringValue}/`
+          + `application/${appId}/`
           + `environment/${env.ref}/*`,
       ],
     });
@@ -77,7 +74,7 @@ export class ApplicationConfigStack extends Stack {
       runtime: functionRuntime,
       code: functionCode,
       environment: {
-        CONFIG_APP: configAppId.stringValue,
+        CONFIG_APP: appId,
         CONFIG_ENV: props.envName,
         CONFIG_NAME: props.envProfileName,
       },
@@ -93,14 +90,13 @@ export class ApplicationConfigStack extends Stack {
       { handler: envFunction },
     );
 
-    this.envApiDomain = `${envApi.restApiId
-    }.execute-api.${this.region}.amazonaws.com`;
+    this.envApiIdExport = this.exportValue(envApi.restApiId);
 
     const flagsFunction = new Function(this, 'FlagsFunction', {
       runtime: functionRuntime,
       code: functionCode,
       environment: {
-        CONFIG_APP: configAppId.stringValue,
+        CONFIG_APP: appId,
         CONFIG_ENV: props.envName,
         CONFIG_NAME: props.flagsProfileName || 'Flags',
       },
@@ -115,7 +111,6 @@ export class ApplicationConfigStack extends Stack {
       { handler: flagsFunction },
     );
 
-    this.flagsApiDomain = `${flagsApi.restApiId
-    }.execute-api.${this.region}.amazonaws.com`;
+    this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
   }
 }
