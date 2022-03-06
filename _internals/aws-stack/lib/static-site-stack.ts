@@ -24,6 +24,7 @@ export interface AppGwOriginProps {
 }
 
 export interface AppGwFailoverOriginProps {
+  apiAccount: string
   apiIdParameterName: string
   apiRegion: string
 }
@@ -208,7 +209,7 @@ export class StaticSiteStack extends Stack {
       this,
       parameterReaderId,
       {
-        account: this.account,
+        account: fallbackProps.apiAccount,
         parameterName: fallbackProps.apiIdParameterName,
         region: fallbackProps.apiRegion,
       },

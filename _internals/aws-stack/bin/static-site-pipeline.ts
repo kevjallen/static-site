@@ -68,7 +68,7 @@ const setupWave = stack.pipeline.addWave('StaticSite-Setup');
 
 const primaryConfigStage = new ApplicationConfigBaseStage(
   app,
-  `StaticSite-Config-${primaryEnv.description}`,
+  `StaticSite-CommonConfig-${primaryEnv.description}`,
   {
     appDescription: 'static-site runtime configuration',
     appName: 'static-site',
@@ -80,7 +80,7 @@ setupWave.addStage(primaryConfigStage);
 
 const secondaryConfigStage = new ApplicationConfigBaseStage(
   app,
-  `StaticSite-Config-${secondaryEnv.description}`,
+  `StaticSite-CommonConfig-${secondaryEnv.description}`,
   {
     appDescription: 'static-site runtime configuration',
     appName: 'static-site',
@@ -126,6 +126,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
   },
   envConfigFailoverOriginProps:
     !previewConfigStage.envApiIdFailoverParameterName ? undefined : {
+      apiAccount: secondaryEnv.account,
       apiIdParameterName: previewConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
@@ -135,6 +136,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
   },
   flagsConfigFailoverOriginProps:
     !previewConfigStage.flagsApiIdFailoverParameterName ? undefined : {
+      apiAccount: secondaryEnv.account,
       apiIdParameterName: previewConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
@@ -196,6 +198,7 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite',
   },
   envConfigFailoverOriginProps:
     !productionConfigStage.envApiIdFailoverParameterName ? undefined : {
+      apiAccount: secondaryEnv.account,
       apiIdParameterName: productionConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
@@ -205,6 +208,7 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite',
   },
   flagsConfigFailoverOriginProps:
     !productionConfigStage.flagsApiIdFailoverParameterName ? undefined : {
+      apiAccount: secondaryEnv.account,
       apiIdParameterName: productionConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
     },
