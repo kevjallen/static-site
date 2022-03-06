@@ -21,19 +21,19 @@ export class AppConfigStack extends Stack {
   constructor(scope: Construct, id: string, props: AppConfigStackProps) {
     super(scope, id, props);
 
-    new CfnConfigurationProfile(this, 'ConfigProfile', {
+    new CfnConfigurationProfile(this, 'Profile', {
       applicationId: props.applicationId,
       locationUri: 'hosted',
       name: props.configProfileName,
       type: 'AWS.Freeform',
     });
 
-    new CfnEnvironment(this, 'ConfigEnvironment', {
+    new CfnEnvironment(this, 'Environment', {
       applicationId: props.applicationId,
       name: props.environmentName,
     });
 
-    const configFunction = new Function(this, 'ConfigFunction', {
+    const configFunction = new Function(this, 'Function', {
       runtime: Runtime.PYTHON_3_9,
       code: Code.fromInline(readFileSync('lib/lambda/config.py').toString()),
       environment: {
@@ -57,7 +57,7 @@ export class AppConfigStack extends Stack {
       ],
       resources: [
         `arn:aws:appconfig:${this.region}:${this.account}`
-          + `:application/${props.applicationId}`,
+          + `:application/${props.applicationId}/*`,
       ],
     }));
 
