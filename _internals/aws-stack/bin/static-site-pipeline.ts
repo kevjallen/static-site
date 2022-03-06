@@ -9,10 +9,10 @@ const app = new cdk.App();
 
 const cdkAppPath = '_internals/aws-stack';
 
-const account = process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT;
-const region = process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION;
-
-const appConfigId = 'x6uxlg4';
+const env = {
+  account: app.node.tryGetContext('mainAccountId'),
+  region: app.node.tryGetContext('mainRegion'),
+};
 
 const sourceConnectionId = 'bad4ffec-6d29-4b6a-bf2a-c4718648d78e';
 
@@ -20,8 +20,10 @@ const sourceRepo = 'kevjallen/static-site';
 
 const stack = new PipelineStack(app, 'StaticSitePipeline', {
   sourceConnectionArn:
-    `arn:aws:codestar-connections:${region}:${account}:connection/${sourceConnectionId}`,
+    `arn:aws:codestar-connections:${env.region}:${env.account}`
+      + `:connection/${sourceConnectionId}`,
   sourceRepo,
+  sourceRepoBranch: 'master',
   synthCommands: [
     'bundle install',
     'bundle exec jekyll build',
@@ -29,11 +31,15 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     'npm install',
     'npm run lint',
     'npm run test',
-    'npm run cdk synth -- --output=$(mktemp -d) --quiet',
+    'npm run cdk synth -- --output=$(mktemp -d) --quiet'
+      + ' -c mainAccountId=$CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID'
+      + ' -c mainRegion=$AWS_DEFAULT_REGION',
     `git remote set-url origin https://$GITHUB_TOKEN@github.com/${sourceRepo}.git`,
     'npx semantic-release && VERSION=$(git tag --points-at)',
     'if [ -z "$VERSION" ]; then VERSION=$CODEBUILD_RESOLVED_SOURCE_VERSION; fi',
-    'npm run cdk synth -- -c version=$VERSION --quiet',
+    'npm run cdk synth -- -c version=$VERSION --quiet'
+      + ' -c mainAccountId=$CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID'
+      + ' -c mainRegion=$AWS_DEFAULT_REGION',
   ],
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
   gitHubTokenSecretName: 'github-token',
@@ -46,15 +52,11 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
     ASDF_SCRIPT: '/root/.asdf/asdf.sh',
   },
   synthOutputDir: `${cdkAppPath}/cdk.out`,
+  env,
 });
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
-  appConfigProps: {
-    applicationId: appConfigId,
-    environmentName: 'Preview',
-    configProfileName: 'Preview',
-    restApiName: 'static-site-preview-config-api',
-  },
+  siteFailoverRegion: 'us-east-1',
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
@@ -70,22 +72,18 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
     subdomain: 'preview',
   },
   version: stack.version,
+  env,
 });
 stack.pipeline.addStage(previewStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
-  appConfigProps: {
-    applicationId: appConfigId,
-    environmentName: 'Production',
-    configProfileName: 'Production',
-    restApiName: 'static-site-production-config-api',
-  },
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
   },
   version: stack.version,
+  env,
 });
 stack.pipeline.addStage(productionStage, {
   pre: [new ManualApprovalStep('ManualApproval')],

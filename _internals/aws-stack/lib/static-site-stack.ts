@@ -11,7 +11,13 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 
+interface FailoverBucketProps {
+  bucketName: string
+  bucketRegion: string
+}
+
 interface StaticSiteStackBaseProps extends StackProps {
+  failoverBucket?: FailoverBucketProps
   forceDestroy?: boolean
   responseBehaviors?: {
     customHeaders?: cloudfront.ResponseCustomHeader[]
@@ -30,6 +36,14 @@ export type StaticSiteStackProps = StaticSiteStackBaseProps & (
   )
 );
 
+export function getBucketProps(siteProps?: StaticSiteStackProps) {
+  return {
+    autoDeleteObjects: siteProps?.forceDestroy,
+    blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    removalPolicy: siteProps?.forceDestroy ? RemovalPolicy.DESTROY : undefined,
+  };
+}
+
 export class StaticSiteStack extends Stack {
   public readonly distribution: cloudfront.Distribution;
 
@@ -40,7 +54,6 @@ export class StaticSiteStack extends Stack {
     if (props?.subdomain && siteDomain) {
       siteDomain = `${props.subdomain}.${siteDomain}`;
     }
-
     if (siteDomain) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
@@ -74,9 +87,7 @@ export class StaticSiteStack extends Stack {
     const oaiS3CanonicalUserId = oai.cloudFrontOriginAccessIdentityS3CanonicalUserId;
 
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {
-      autoDeleteObjects: props?.forceDestroy,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: props?.forceDestroy ? RemovalPolicy.DESTROY : undefined,
+      ...getBucketProps(props),
     });
     siteBucket.addToResourcePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject'],
@@ -84,6 +95,14 @@ export class StaticSiteStack extends Stack {
       principals: [new iam.CanonicalUserPrincipal(oaiS3CanonicalUserId)],
     }));
     new CfnOutput(this, 'BucketName', { value: siteBucket.bucketName });
+
+    let failoverBucket: s3.IBucket | undefined;
+    if (props?.failoverBucket) {
+      failoverBucket = s3.Bucket.fromBucketAttributes(this, 'FailoverSiteBucket', {
+        bucketName: props.failoverBucket.bucketName,
+        region: props.failoverBucket.bucketRegion,
+      });
+    }
 
     let headers: cloudfront.IResponseHeadersPolicy | undefined;
     if (props?.responseBehaviors) {
@@ -95,10 +114,25 @@ export class StaticSiteStack extends Stack {
       });
     }
 
+    const primaryOrigin = new origins.S3Origin(siteBucket, {
+      originAccessIdentity: oai,
+    });
+
+    let originGroup: origins.OriginGroup | undefined;
+    if (failoverBucket) {
+      const fallbackOrigin = new origins.S3Origin(failoverBucket, {
+        originAccessIdentity: oai,
+      });
+      originGroup = new origins.OriginGroup({
+        primaryOrigin,
+        fallbackOrigin,
+      });
+    }
+
     this.distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
       certificate,
       defaultBehavior: {
-        origin: new origins.S3Origin(siteBucket, { originAccessIdentity: oai }),
+        origin: originGroup || primaryOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         responseHeadersPolicy: headers,
       },
