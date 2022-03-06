@@ -1,5 +1,5 @@
 import {
-  Fn, Stack, StackProps,
+  Stack, StackProps,
 } from 'aws-cdk-lib';
 import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
 import { CfnConfigurationProfile, CfnEnvironment } from 'aws-cdk-lib/aws-appconfig';
@@ -28,7 +28,7 @@ export class ApplicationConfigStack extends Stack {
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
 
-    const appId = Fn.importValue(props.appIdExport);
+    const appId = props.appIdExport;
 
     const env = new CfnEnvironment(this, 'Environment', {
       applicationId: appId,

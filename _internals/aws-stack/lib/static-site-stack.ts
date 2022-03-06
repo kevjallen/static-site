@@ -1,5 +1,5 @@
 import {
-  CfnOutput, Fn, RemovalPolicy, Stack, StackProps,
+  CfnOutput, RemovalPolicy, Stack, StackProps,
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
@@ -62,7 +62,6 @@ export class StaticSiteStack extends Stack {
     if (props?.subdomain && siteDomain) {
       siteDomain = `${props.subdomain}.${siteDomain}`;
     }
-
     if (siteDomain) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
@@ -181,11 +180,10 @@ export class StaticSiteStack extends Stack {
     pathPattern: string,
     props: AppGwOriginProps,
   ) {
-    const id = Fn.importValue(props.apiIdExport);
     this.distribution.addBehavior(
       pathPattern,
       new HttpOrigin(
-        `${id}.execute-api.${props.apiRegion}.amazonaws.com`,
+        `${props.apiIdExport}.execute-api.${props.apiRegion}.amazonaws.com`,
       ),
       {
         responseHeadersPolicy: this.headers,
@@ -199,16 +197,16 @@ export class StaticSiteStack extends Stack {
     primaryProps: AppGwOriginProps,
     fallbackProps: AppGwOriginProps,
   ) {
-    const primaryId = Fn.importValue(primaryProps.apiIdExport);
-    const fallbackId = Fn.importValue(fallbackProps.apiIdExport);
     this.distribution.addBehavior(
       pathPattern,
       new OriginGroup({
         primaryOrigin: new HttpOrigin(
-          `${primaryId}.execute-api.${primaryProps.apiRegion}.amazonaws.com`,
+          `${primaryProps.apiIdExport}.execute-api`
+            + `.${primaryProps.apiRegion}.amazonaws.com`,
         ),
         fallbackOrigin: new HttpOrigin(
-          `${fallbackId}.execute-api.${fallbackProps.apiRegion}.amazonaws.com`,
+          `${fallbackProps.apiIdExport}.execute-api`
+            + `.${fallbackProps.apiRegion}.amazonaws.com`,
         ),
       }),
       {

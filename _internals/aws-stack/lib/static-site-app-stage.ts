@@ -56,6 +56,21 @@ export class StaticSiteAppStage extends Stage {
       }
     }
 
+    if (props?.flagsConfigOriginProps) {
+      if (props.flagsConfigFailoverOriginProps) {
+        site.addAppGwOriginGroupFromExports(
+          '/flags',
+          props.flagsConfigOriginProps,
+          props.flagsConfigFailoverOriginProps,
+        );
+      } else {
+        site.addAppGwOriginFromExport(
+          '/flags',
+          props.flagsConfigOriginProps,
+        );
+      }
+    }
+
     if (props?.version) {
       Tags.of(this).add('version', props.version);
     }
