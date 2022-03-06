@@ -12,6 +12,8 @@ const cdkAppPath = '_internals/aws-stack';
 const account = process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT;
 const region = process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION;
 
+const appConfigId = 'x6uxlg4';
+
 const sourceConnectionId = 'bad4ffec-6d29-4b6a-bf2a-c4718648d78e';
 
 const sourceRepo = 'kevjallen/static-site';
@@ -47,6 +49,12 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
 });
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
+  appConfigProps: {
+    applicationId: appConfigId,
+    environmentName: 'Preview',
+    configProfileName: 'Preview',
+    restApiName: 'static-site-preview-config-api',
+  },
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
@@ -66,6 +74,12 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
 stack.pipeline.addStage(previewStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
+  appConfigProps: {
+    applicationId: appConfigId,
+    environmentName: 'Production',
+    configProfileName: 'Production',
+    restApiName: 'static-site-production-config-api',
+  },
   siteProps: {
     ...commonSiteProps,
     domainName: 'site.kevjallen.com',
