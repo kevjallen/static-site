@@ -82,7 +82,7 @@ const secondaryConfigStage = new ApplicationConfigBaseStage(
   {
     appDescription: 'static-site runtime configuration',
     appName: 'static-site',
-    env: primaryEnv,
+    env: secondaryEnv,
   },
 );
 setupWave.addStage(secondaryConfigStage);
