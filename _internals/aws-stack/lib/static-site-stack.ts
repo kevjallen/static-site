@@ -9,6 +9,7 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
+import { IStringParameter, StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
 interface FailoverBucketProps {
@@ -171,7 +172,19 @@ export class StaticSiteStack extends Stack {
     }
   }
 
-  addOrigin(pathPattern: string, origin: cloudfront.IOrigin) {
+  addOrigin(
+    pathPattern: string, 
+    originParameterId: string, 
+    originParameterName: IStringParameter
+  ) {
+    const originDomain = StringParameter.valueFromLookup(
+      this,
+      originParameterId,
+      { 
+        
+      }
+    )
+
     this.distribution.addBehavior(
       pathPattern,
       origin,

@@ -1,19 +1,19 @@
 import {
   PhysicalName, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
+import { IOrigin } from 'aws-cdk-lib/aws-cloudfront';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import {
-  ApplicationConfigStack, ApplicationConfigStackProps,
-} from './app-config-stack';
 import {
   StaticSiteStack, StaticSiteStackProps, getBucketProps,
 } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
-  configFailoverProps?: ApplicationConfigStackProps
-  configProps?: ApplicationConfigStackProps
+  configFailoverRegion?: string
+  envConfigDomainParameterName?: string
+  flagsConfigDomainParameterName?: string
   siteFailoverRegion?: string
   siteProps?: StaticSiteStackProps
   version?: string
@@ -25,10 +25,11 @@ export class StaticSiteAppStage extends Stage {
 
     let failoverBucket: IBucket | undefined;
     if (props?.siteFailoverRegion) {
-      const failoverStack = new Stack(this, 'SiteFailover', {
+      const siteFailover = new Stack(this, 'SiteFailover', {
         env: { region: props.siteFailoverRegion },
       });
-      failoverBucket = new Bucket(failoverStack, 'SiteBucket', {
+
+      failoverBucket = new Bucket(siteFailover, 'SiteBucket', {
         ...getBucketProps(props.siteProps),
         bucketName: PhysicalName.GENERATE_IF_NEEDED,
       });
@@ -42,41 +43,82 @@ export class StaticSiteAppStage extends Stage {
       },
     });
 
-    if (props?.configProps) {
-      const configStack = new ApplicationConfigStack(
+    if (props?.envConfigDomainParameterName) {
+      const envConfigParameters = new Stack(
         this,
-        'Config',
-        props.configProps,
+        'EnvConfigParameters',
       );
-      const primaryEnvConfigOrigin = new HttpOrigin(configStack.envApiDomain);
-      const primaryFlagsConfigOrigin = new HttpOrigin(configStack.flagsApiDomain);
+      const envConfigDomainParameter = StringParameter.fromStringParameterName(
+        envConfigParameters,
+        'EnvConfigDomainParameter',
+        props.envConfigDomainParameterName,
+      );
+      const envConfigOrigin = new HttpOrigin(envConfigDomainParameter.stringValue);
 
-      let envConfigOriginGroup: OriginGroup | undefined;
-      let flagsConfigOriginGroup: OriginGroup | undefined;
-      if (props.configFailoverProps) {
-        const configFailoverStack = new ApplicationConfigStack(
+      let envConfigOriginFailover: IOrigin | undefined;
+      if (props.configFailoverRegion) {
+        const envConfigParametersFailover = new Stack(
           this,
-          'ConfigFailover',
-          props.configFailoverProps,
+          'EnvConfigParametersFailover',
+          { env: { region: props.configFailoverRegion } },
         );
-        const failoverEnvConfigOrigin = new HttpOrigin(
-          configFailoverStack.envApiDomain,
-        );
-        const failoverFlagsConfigOrigin = new HttpOrigin(
-          configFailoverStack.flagsApiDomain,
-        );
-        envConfigOriginGroup = new OriginGroup({
-          primaryOrigin: primaryEnvConfigOrigin,
-          fallbackOrigin: failoverEnvConfigOrigin,
-        });
-        flagsConfigOriginGroup = new OriginGroup({
-          primaryOrigin: primaryFlagsConfigOrigin,
-          fallbackOrigin: failoverFlagsConfigOrigin,
-        });
-      }
 
-      site.addOrigin('/config', envConfigOriginGroup || primaryEnvConfigOrigin);
-      site.addOrigin('/flags', flagsConfigOriginGroup || primaryFlagsConfigOrigin);
+        const envConfigDomainParameterFailover = StringParameter.fromStringParameterName(
+          envConfigParametersFailover,
+          'EnvConfigDomainParameterFailover',
+          props.envConfigDomainParameterName,
+        );
+
+        envConfigOriginFailover = new HttpOrigin(
+          envConfigDomainParameterFailover.stringValue,
+        );
+      }
+      site.distribution.addBehavior(
+        '/config',
+        !envConfigOriginFailover ? envConfigOrigin : new OriginGroup({
+          primaryOrigin: envConfigOrigin,
+          fallbackOrigin: envConfigOriginFailover,
+        }),
+      );
+    }
+
+    if (props?.flagsConfigDomainParameterName) {
+      const flagsConfigParameters = new Stack(
+        this,
+        'FlagsConfigParameters',
+      );
+      const flagsConfigDomainParameter = StringParameter.fromStringParameterName(
+        flagsConfigParameters,
+        'FlagsConfigDomainParameter',
+        props.flagsConfigDomainParameterName,
+      );
+      const flagsConfigOrigin = new HttpOrigin(flagsConfigDomainParameter.stringValue);
+
+      let flagsConfigOriginFailover: IOrigin | undefined;
+      if (props.configFailoverRegion) {
+        const flagsConfigParametersFailover = new Stack(
+          this,
+          'FlagsConfigParametersFailover',
+          { env: { region: props.configFailoverRegion } },
+        );
+
+        const flagsConfigDomainParameterFailover = StringParameter.fromStringParameterName(
+          flagsConfigParametersFailover,
+          'FlagsConfigDomainParameterFailover',
+          props.flagsConfigDomainParameterName,
+        );
+
+        flagsConfigOriginFailover = new HttpOrigin(
+          flagsConfigDomainParameterFailover.stringValue,
+        );
+      }
+      site.distribution.addBehavior(
+        '/flags',
+        !flagsConfigOriginFailover ? flagsConfigOrigin : new OriginGroup({
+          primaryOrigin: flagsConfigOrigin,
+          fallbackOrigin: flagsConfigOriginFailover,
+        }),
+      );
     }
 
     if (props?.version) {
