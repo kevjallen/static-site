@@ -129,6 +129,15 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-PreviewSite', {
       apiIdExport: previewConfigStage.envApiFailoverIdExport,
       apiRegion: secondaryEnv.region,
     },
+  flagsConfigOriginProps: {
+    apiIdExport: previewConfigStage.flagsApiIdExport,
+    apiRegion: primaryEnv.region,
+  },
+  flagsConfigFailoverOriginProps:
+    !previewConfigStage.flagsApiFailoverIdExport ? undefined : {
+      apiIdExport: previewConfigStage.flagsApiFailoverIdExport,
+      apiRegion: secondaryEnv.region,
+    },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
     ...commonSiteProps,
@@ -181,6 +190,24 @@ const productionConfigStage = new ApplicationConfigEnvStage(
 productionWave.addStage(productionConfigStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-ProductionSite', {
+  envConfigOriginProps: {
+    apiIdExport: productionConfigStage.envApiIdExport,
+    apiRegion: primaryEnv.region,
+  },
+  envConfigFailoverOriginProps:
+    !productionConfigStage.envApiFailoverIdExport ? undefined : {
+      apiIdExport: productionConfigStage.envApiFailoverIdExport,
+      apiRegion: secondaryEnv.region,
+    },
+  flagsConfigOriginProps: {
+    apiIdExport: productionConfigStage.flagsApiIdExport,
+    apiRegion: primaryEnv.region,
+  },
+  flagsConfigFailoverOriginProps:
+    !productionConfigStage.flagsApiFailoverIdExport ? undefined : {
+      apiIdExport: productionConfigStage.flagsApiFailoverIdExport,
+      apiRegion: secondaryEnv.region,
+    },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
     ...commonSiteProps,
