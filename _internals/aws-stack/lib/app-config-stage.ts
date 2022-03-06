@@ -16,7 +16,7 @@ export class ApplicationConfigStage extends Stage {
   constructor(scope: Construct, id: string, props: ApplicationConfigStageProps) {
     super(scope, id, props);
 
-    const stack = new Stack(this, 'Config');
+    const stack = new Stack(this, 'Flags');
 
     const application = new CfnApplication(stack, 'Application', {
       name: props.appName,

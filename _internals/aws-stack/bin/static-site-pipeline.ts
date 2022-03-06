@@ -69,7 +69,7 @@ const setupWave = stack.pipeline.addWave('StaticSite-Setup');
 configEnvs.map((configEnv) => setupWave.addStage(
   new ApplicationConfigStage(
     app,
-    `StaticSite-Common-${configEnv.description}`,
+    `StaticSite-Config-${configEnv.description}`,
     {
       appDescription: 'static-site runtime configuration',
       appName: 'static-site',
