@@ -1,5 +1,5 @@
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { AwsCustomResource, AwsSdkCall } from 'aws-cdk-lib/custom-resources';
+import { AwsCustomResource, AwsSdkCall, PhysicalResourceId } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
 export interface SSMParameterReaderProps {
@@ -19,9 +19,7 @@ export default class SSMParameterReader extends AwsCustomResource {
         Name: props.parameterName,
       },
       region: props.region,
-      physicalResourceId: {
-        id: `GetParameter-${Date.now().toString()}`,
-      },
+      physicalResourceId: PhysicalResourceId.fromResponse('Parameter.Name'),
     };
 
     super(scope, name, {
