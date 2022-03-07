@@ -1,5 +1,6 @@
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { AwsCustomResource, AwsSdkCall, PhysicalResourceId } from 'aws-cdk-lib/custom-resources';
+import {
+  AwsCustomResource, AwsCustomResourcePolicy, AwsSdkCall, PhysicalResourceId,
+} from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
 export interface SSMParameterReaderProps {
@@ -26,14 +27,9 @@ export default class SSMParameterReader extends AwsCustomResource {
 
     super(scope, name, {
       onUpdate: ssmAwsSdkCall,
-      policy: {
-        statements: [
-          new PolicyStatement({
-            resources: ['*'],
-            actions: ['ssm:GetParameter'],
-          }),
-        ],
-      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
     });
   }
 
