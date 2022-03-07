@@ -51,7 +51,6 @@ interface StaticSiteStackBaseProps extends StackProps {
     securityHeaders?: cloudfront.ResponseSecurityHeadersBehavior
   }
   siteContentsPath?: string
-  siteConfigPath?: string
 }
 
 export type StaticSiteStackProps = StaticSiteStackBaseProps & (
