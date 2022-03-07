@@ -3,7 +3,7 @@ import {
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import { ICachePolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { ICachePolicy, OriginProps } from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -19,7 +19,7 @@ export interface FailoverBucketProps {
   bucketRegion: string
 }
 
-export interface AppGwOriginProps {
+export interface AppGwOriginProps extends OriginProps {
   apiId: string
   apiRegion: string
 }
@@ -30,7 +30,7 @@ export interface AddAppGwOriginOptions {
   cachePolicy?: ICachePolicy
 }
 
-export interface AppGwFailoverOriginProps {
+export interface AppGwFailoverOriginProps extends OriginProps {
   apiIdParameterName: string
   apiRegion: string
   parameterReaderId: string
@@ -83,6 +83,7 @@ export class StaticSiteStack extends Stack {
     if (props?.subdomain && siteDomain) {
       siteDomain = `${props.subdomain}.${siteDomain}`;
     }
+
     if (siteDomain) {
       new CfnOutput(this, 'SiteDomain', { value: siteDomain });
     }
@@ -206,6 +207,7 @@ export class StaticSiteStack extends Stack {
       new HttpOrigin(
         `${options.originProps.apiId}.execute-api`
           + `.${options.originProps.apiRegion}.amazonaws.com`,
+        options.originProps,
       ),
       {
         responseHeadersPolicy: this.headers,
@@ -235,10 +237,12 @@ export class StaticSiteStack extends Stack {
         primaryOrigin: new HttpOrigin(
           `${options.primaryOriginProps.apiId}.execute-api`
             + `.${options.primaryOriginProps.apiRegion}.amazonaws.com`,
+          options.primaryOriginProps,
         ),
         fallbackOrigin: new HttpOrigin(
           `${fallbackApiIdReader.getParameterValue()}.execute-api`
             + `.${options.failoverOriginProps.apiRegion}.amazonaws.com`,
+          options.failoverOriginProps,
         ),
       }),
       {

@@ -119,26 +119,32 @@ const previewConfigStage = new ApplicationConfigEnvStage(
 );
 stack.pipeline.addStage(previewConfigStage);
 
+const originPath = '/prod';
+
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
   configDefaultTtl: Duration.minutes(5),
   envConfigOriginProps: {
     apiId: previewConfigStage.envApiId,
     apiRegion: primaryEnv.region,
+    originPath,
   },
   envConfigFailoverOriginProps:
     !previewConfigStage.envApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: previewConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
+      originPath,
       parameterReaderId: 'EnvConfigFailoverApiIdReader',
     },
   flagsConfigOriginProps: {
     apiId: previewConfigStage.flagsApiId,
     apiRegion: primaryEnv.region,
+    originPath,
   },
   flagsConfigFailoverOriginProps:
     !previewConfigStage.flagsApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: previewConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
+      originPath,
       parameterReaderId: 'FlagsConfigFailoverApiIdReader',
     },
   siteFailoverRegion: secondaryEnv.region,
@@ -195,22 +201,26 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site'
   envConfigOriginProps: {
     apiId: productionConfigStage.envApiId,
     apiRegion: primaryEnv.region,
+    originPath,
   },
   envConfigFailoverOriginProps:
     !productionConfigStage.envApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: productionConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
       parameterReaderId: 'EnvConfigFailoverApiIdReader',
+      originPath,
     },
   flagsConfigOriginProps: {
     apiId: productionConfigStage.flagsApiId,
     apiRegion: primaryEnv.region,
+    originPath,
   },
   flagsConfigFailoverOriginProps:
     !productionConfigStage.flagsApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: productionConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
       parameterReaderId: 'FlagsConfigFailoverApiIdReader',
+      originPath,
     },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
