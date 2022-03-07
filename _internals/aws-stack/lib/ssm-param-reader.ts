@@ -19,7 +19,9 @@ export default class SSMParameterReader extends AwsCustomResource {
         Name: props.parameterName,
       },
       region: props.region,
-      physicalResourceId: PhysicalResourceId.fromResponse('Parameter.Name'),
+      physicalResourceId: PhysicalResourceId.of(
+        'GetParameter' + Date.now().toString()
+      ),
     };
 
     super(scope, name, {
@@ -28,7 +30,8 @@ export default class SSMParameterReader extends AwsCustomResource {
         statements: [
           new PolicyStatement({
             resources: [
-              `arn:aws:ssm:${region}:${account}:parameter/${parameterName}`,
+              // `arn:aws:ssm:${region}:${account}:parameter/${parameterName}`,
+              '*'
             ],
             actions: ['ssm:GetParameter'],
           }),
