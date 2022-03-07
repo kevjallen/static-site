@@ -15,6 +15,4 @@ The cdk bootstrap command will grant admin rights to CloudFormation by default.
 
 The stack must be manually deployed one time from a local machine.
 
-
-
-After initial deployment, it will update itself (self-mutate) during its normal execution.
+After the initial deployment, it will update itself during normal execution.
