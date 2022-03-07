@@ -1,5 +1,4 @@
 import {
-  PhysicalName,
   Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
@@ -30,6 +29,7 @@ export class ApplicationConfigEnvStage extends Stage {
       'Provider',
       props.configProps,
     );
+
     this.envApiId = config.envApiId;
     this.flagsApiId = config.envApiId;
 
@@ -40,31 +40,21 @@ export class ApplicationConfigEnvStage extends Stage {
         props.configFailoverProps,
       );
 
-      const envApiIdFailoverParameter = new StringParameter(
-        configFailover,
-        'EnvApiFailoverParameter',
-        {
-          parameterName: PhysicalName.GENERATE_IF_NEEDED,
-          simpleName: true,
-          stringValue: configFailover.envApiId,
-        },
-      );
-      this.envApiIdFailoverParameterName = configFailover.exportValue(
-        envApiIdFailoverParameter.parameterName,
-      );
+      this.envApiIdFailoverParameterName = `/${
+        props.configFailoverProps.restApiPrefix}/envApiId`;
 
-      const flagsApiIdFailoverParameter = new StringParameter(
-        configFailover,
-        'FlagsApiFailoverParameter',
-        {
-          parameterName: PhysicalName.GENERATE_IF_NEEDED,
-          simpleName: true,
-          stringValue: configFailover.flagsApiId,
-        },
-      );
-      this.flagsApiIdFailoverParameterName = configFailover.exportValue(
-        flagsApiIdFailoverParameter.parameterName,
-      );
+      new StringParameter(configFailover, 'EnvApiFailoverParameter', {
+        parameterName: this.envApiIdFailoverParameterName,
+        stringValue: configFailover.envApiId,
+      });
+
+      this.flagsApiIdFailoverParameterName = `/${
+        props.configFailoverProps.restApiPrefix}/flagsApiId`;
+
+      new StringParameter(configFailover, 'FlagsApiFailoverParameter', {
+        parameterName: this.flagsApiIdFailoverParameterName,
+        stringValue: configFailover.flagsApiId,
+      });
     }
 
     if (props?.version) {
