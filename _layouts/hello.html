@@ -1,9 +1,14 @@
 ---
 layout: post
 ---
-<script>{% include config.js %}</script>
+<script>{% include fetch-config.js %}</script>
 <script>{% include message.js %}</script>
-<body onload="helloMessage();">
+
+{% if jekyll.environment == "production" %}
+<body onload="helloMessage('/config');">
+{% else %}
+<body onload="helloMessage('/config.json');">
+{% endif %}
   <p id="helloMessage"/>
   {{ content }}
 </body>
