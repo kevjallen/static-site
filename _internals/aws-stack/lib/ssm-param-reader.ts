@@ -10,7 +10,7 @@ export interface SSMParameterReaderProps {
 
 export default class SSMParameterReader extends AwsCustomResource {
   constructor(scope: Construct, name: string, props: SSMParameterReaderProps) {
-    const { account, parameterName, region } = props;
+    const { /* account, */ parameterName, region } = props;
 
     const ssmAwsSdkCall: AwsSdkCall = {
       service: 'SSM',
@@ -29,9 +29,7 @@ export default class SSMParameterReader extends AwsCustomResource {
       policy: {
         statements: [
           new PolicyStatement({
-            resources: [
-              `arn:aws:ssm:${region}:${account}:parameter/*`,
-            ],
+            resources: ['*'],
             actions: ['ssm:GetParameter'],
           }),
         ],
