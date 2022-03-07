@@ -30,8 +30,8 @@ export class ApplicationConfigEnvStage extends Stage {
       props.configProps,
     );
 
-    this.envApiId = config.envApiId;
-    this.flagsApiId = config.flagsApiId;
+    this.envApiId = config.envApiIdExport;
+    this.flagsApiId = config.flagsApiIdExport;
 
     if (props.configFailoverProps) {
       const configFailover = new ApplicationConfigStack(
