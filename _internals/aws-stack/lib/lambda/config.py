@@ -1,7 +1,7 @@
 import os
 from urllib import request
 
-def handler():
+def handler(event, context):
   application = os.environ['CONFIG_APP']
   environment = os.environ['CONFIG_ENV']
   config = os.environ['CONFIG_NAME']
