@@ -40,7 +40,7 @@ const stack = new PipelineStack(app, 'StaticSitePipeline', {
   synthCommands: [
     'bundle install',
     'export JEKYLL_ENV=production',
-    'bundle exec jekyll build',
+    'bundle exec jekyll build --config _config.yml,_build.yml',
     `cd ${cdkAppPath}`,
     'npm install',
     'npm run lint',
