@@ -5,29 +5,17 @@ import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebui
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
-export function importBuildImageFromName(
-  scope: Construct,
-  repoImportId: string,
-  imageFullName: string,
-): IBuildImage {
-  const [imageRepoName, imageTag] = imageFullName.split(':');
-  const imageRepo = Repository.fromRepositoryName(
-    scope,
-    repoImportId,
-    imageRepoName,
-  );
-  return LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
-}
-
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
   sourceRepo: string
   synthCommands: string[]
 
   buildImageFromEcr?: string
+  crossAccountKeys?: boolean
   gitHubTokenSecretName?: string
   installCommands?: string[]
   pipelineName?: string
+  publishAssetsInParallel?: boolean
   sourceRepoBranch?: string
   synthCommandShell?: string
   synthEnv?: Record<string, string>
@@ -35,20 +23,24 @@ export interface PipelineStackProps extends StackProps {
 }
 
 export class PipelineStack extends Stack {
-  public readonly gitHubToken: ISecret | undefined;
+  private readonly gitHubToken: ISecret | undefined;
 
   public readonly pipeline: CodePipeline;
+
+  public readonly version: string | undefined;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
 
     let buildImage: IBuildImage | undefined;
     if (props.buildImageFromEcr) {
-      buildImage = importBuildImageFromName(
+      const [imageRepoName, imageTag] = props.buildImageFromEcr.split(':');
+      const imageRepo = Repository.fromRepositoryName(
         this,
         'BuildImageRepo',
-        props.buildImageFromEcr,
+        imageRepoName,
       );
+      buildImage = LinuxBuildImage.fromEcrRepository(imageRepo, imageTag);
     }
 
     const sourceBranch = props.sourceRepoBranch || 'master';
@@ -62,7 +54,9 @@ export class PipelineStack extends Stack {
     }
 
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
+      crossAccountKeys: props.crossAccountKeys === true,
       pipelineName: props.pipelineName,
+      publishAssetsInParallel: props.publishAssetsInParallel === true,
       synth: new CodeBuildStep('Synthesize', {
         buildEnvironment: {
           buildImage,
@@ -86,10 +80,13 @@ export class PipelineStack extends Stack {
         projectName: props.pipelineName ? `${props.pipelineName}-synth` : undefined,
       }),
     });
+
+    this.version = this.node.tryGetContext('version');
   }
 
-  public buildPipeline() {
+  buildPipeline() {
     this.pipeline.buildPipeline();
+
     if (this.gitHubToken) {
       this.gitHubToken.grantRead(this.pipeline.synthProject);
     }

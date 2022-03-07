@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Duration } from 'aws-cdk-lib';
 import { HeadersFrameOption, HeadersReferrerPolicy } from 'aws-cdk-lib/aws-cloudfront';
 import { StaticSiteStackProps } from '../lib/static-site-stack';
