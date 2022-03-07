@@ -13,13 +13,8 @@ The cdk bootstrap command will grant admin rights to CloudFormation by default.
 
 ## Deploying this project
 
-The default stack will deploy a self-mutating continuous delivery pipeline to AWS.
+The stack must be manually deployed one time from a local machine.
 
-After being manully deployed once, it will update itself during its normal execution.
 
-There is also an integration project which deploys transient sites for E2E testing.
 
-Override the app in your CDK command to target the (optional) integration project.
-- `cdk deploy --app='npx ts-node --prefer-ts-exts bin/integration.ts'`
-
-In this example, the integration project runs on code changes to pull requests.
+After initial deployment, it will update itself (self-mutate) during its normal execution.
