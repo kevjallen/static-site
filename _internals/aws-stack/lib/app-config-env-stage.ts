@@ -31,7 +31,7 @@ export class ApplicationConfigEnvStage extends Stage {
     );
 
     this.envApiId = config.envApiId;
-    this.flagsApiId = config.envApiId;
+    this.flagsApiId = config.flagsApiId;
 
     if (props.configFailoverProps) {
       const configFailover = new ApplicationConfigStack(
@@ -41,7 +41,7 @@ export class ApplicationConfigEnvStage extends Stage {
       );
 
       this.envApiIdFailoverParameterName = `/${
-        props.configFailoverProps.restApiPrefix}/envApiId`;
+        props.configFailoverProps.restApiPrefix}/envApiFailoverId`;
 
       new StringParameter(configFailover, 'EnvApiFailoverParameter', {
         parameterName: this.envApiIdFailoverParameterName,
@@ -49,7 +49,7 @@ export class ApplicationConfigEnvStage extends Stage {
       });
 
       this.flagsApiIdFailoverParameterName = `/${
-        props.configFailoverProps.restApiPrefix}/flagsApiId`;
+        props.configFailoverProps.restApiPrefix}/flagsApiFailoverId`;
 
       new StringParameter(configFailover, 'FlagsApiFailoverParameter', {
         parameterName: this.flagsApiIdFailoverParameterName,
