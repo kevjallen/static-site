@@ -30,7 +30,7 @@ export default class SSMParameterReader extends AwsCustomResource {
         statements: [
           new PolicyStatement({
             resources: [
-              `arn:aws:${region}:${account}:parameter/${parameterName}`,
+              `arn:aws:ssm:${region}:${account}:parameter/${parameterName}`,
             ],
             actions: ['ssm:GetParameter'],
           }),
