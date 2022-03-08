@@ -94,12 +94,12 @@ const secondaryConfigStage = new ApplicationConfigBaseStage(
 );
 setupWave.addStage(secondaryConfigStage);
 
-const configOriginPath = '/api';
+const restApiStageName = 'api';
 
 const restApiOptions: StageOptions = {
   cacheDataEncrypted: true,
   cachingEnabled: true,
-  stageName: configOriginPath,
+  stageName: restApiStageName,
 };
 
 const previewConfigProps = {
@@ -136,25 +136,25 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
   envConfigOriginProps: {
     apiId: previewConfigStage.envApiId,
     apiRegion: primaryEnv.region,
-    originPath: configOriginPath,
+    originPath: `/${restApiStageName}`,
   },
   envConfigFailoverOriginProps:
     !previewConfigStage.envApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: previewConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
-      originPath: configOriginPath,
+      originPath: `/${restApiStageName}`,
       parameterReaderId: 'EnvConfigFailoverApiIdReader',
     },
   flagsConfigOriginProps: {
     apiId: previewConfigStage.flagsApiId,
     apiRegion: primaryEnv.region,
-    originPath: configOriginPath,
+    originPath: `/${restApiStageName}`,
   },
   flagsConfigFailoverOriginProps:
     !previewConfigStage.flagsApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: previewConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
-      originPath: configOriginPath,
+      originPath: `/${restApiStageName}`,
       parameterReaderId: 'FlagsConfigFailoverApiIdReader',
     },
   siteFailoverRegion: secondaryEnv.region,
@@ -213,26 +213,26 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site'
   envConfigOriginProps: {
     apiId: productionConfigStage.envApiId,
     apiRegion: primaryEnv.region,
-    originPath: configOriginPath,
+    originPath: `/${restApiStageName}`,
   },
   envConfigFailoverOriginProps:
     !productionConfigStage.envApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: productionConfigStage.envApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
       parameterReaderId: 'EnvConfigFailoverApiIdReader',
-      originPath: configOriginPath,
+      originPath: `/${restApiStageName}`,
     },
   flagsConfigOriginProps: {
     apiId: productionConfigStage.flagsApiId,
     apiRegion: primaryEnv.region,
-    originPath: configOriginPath,
+    originPath: `/${restApiStageName}`,
   },
   flagsConfigFailoverOriginProps:
     !productionConfigStage.flagsApiIdFailoverParameterName ? undefined : {
       apiIdParameterName: productionConfigStage.flagsApiIdFailoverParameterName,
       apiRegion: secondaryEnv.region,
       parameterReaderId: 'FlagsConfigFailoverApiIdReader',
-      originPath: configOriginPath,
+      originPath: `/${restApiStageName}`,
     },
   siteFailoverRegion: secondaryEnv.region,
   siteProps: {
