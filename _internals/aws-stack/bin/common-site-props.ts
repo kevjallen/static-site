@@ -19,7 +19,7 @@ const commonSiteProps: StaticSiteStackProps = {
         override: false,
       },
       strictTransportSecurity: {
-        accessControlMaxAge: Duration.seconds(600),
+        accessControlMaxAge: Duration.seconds(31536000),
         includeSubdomains: true,
         override: false,
       },

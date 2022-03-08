@@ -1,7 +1,7 @@
 import {
   Stack, StackProps,
 } from 'aws-cdk-lib';
-import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
+import { LambdaRestApi, StageOptions } from 'aws-cdk-lib/aws-apigateway';
 import { CfnConfigurationProfile, CfnEnvironment } from 'aws-cdk-lib/aws-appconfig';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
@@ -18,6 +18,7 @@ export interface ApplicationConfigStackProps extends StackProps {
   restApiPrefix: string
 
   flagsProfileName?: string
+  restApiOptions?: StageOptions
 }
 
 export class ApplicationConfigStack extends Stack {
@@ -91,8 +92,12 @@ export class ApplicationConfigStack extends Stack {
     const envApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-env-config-api`,
-      { handler: envFunction },
+      {
+        handler: envFunction,
+        deployOptions: props.restApiOptions,
+      },
     );
+
     this.envApiId = envApi.restApiId;
     this.envApiIdExport = this.exportValue(envApi.restApiId);
 
@@ -112,7 +117,10 @@ export class ApplicationConfigStack extends Stack {
     const flagsApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-flags-config-api`,
-      { handler: flagsFunction },
+      {
+        handler: flagsFunction,
+        deployOptions: props.restApiOptions,
+      },
     );
     this.flagsApiId = flagsApi.restApiId;
     this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
