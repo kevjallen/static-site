@@ -1,0 +1,5 @@
+{% for script in site.static_files | where: "script", true %}
+  {% if script.name == 'fetch-config.js' or script.name == 'message.js' %}
+    <script src={{ script.path }}></script>
+  {% endif %}
+{% endfor %}

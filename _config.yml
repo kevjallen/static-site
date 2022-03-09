@@ -1,10 +1,21 @@
 title: Kevin Allen
-description: >- 
-  Engineer and consultant from Cleveland, Ohio
 
 theme: minimal-mistakes-jekyll
 plugins:
   - jekyll-feed
+
+defaults:
+  - scope: 
+      path: assets/img
+    values:
+      image: true
+  - scope:
+      path: assets/js
+    values:
+      script: true
+
+include:
+  - _pages
 
 exclude:
   - LICENSE
