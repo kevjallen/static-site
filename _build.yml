@@ -1,4 +1,4 @@
 exclude:
   - LICENSE
   - README.md
-  - config.json
+  - public
