@@ -1,8 +1,7 @@
 import {
-  Duration,
   PhysicalName, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
-import { CachePolicy, ICachePolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { CachePolicy, CachePolicyProps, ICachePolicy } from 'aws-cdk-lib/aws-cloudfront';
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import {
@@ -11,7 +10,7 @@ import {
 } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
-  configDefaultTtl?: Duration
+  configCacheProps?: CachePolicyProps
   envConfigOriginProps?: AppGwOriginProps
   envConfigFailoverOriginProps?: AppGwFailoverOriginProps
   flagsConfigOriginProps?: AppGwOriginProps
@@ -45,10 +44,12 @@ export class StaticSiteAppStage extends Stage {
     });
 
     let configCachePolicy: ICachePolicy | undefined;
-    if (props?.envConfigOriginProps || props?.flagsConfigOriginProps) {
-      configCachePolicy = new CachePolicy(site, 'ConfigCachePolicy', {
-        defaultTtl: props.configDefaultTtl,
-      });
+    if (props?.configCacheProps) {
+      configCachePolicy = new CachePolicy(
+        site,
+        'ConfigCachePolicy',
+        props.configCacheProps,
+      );
     }
 
     if (props?.envConfigOriginProps) {

@@ -132,7 +132,9 @@ const previewConfigStage = new ApplicationConfigEnvStage(
 stack.pipeline.addStage(previewConfigStage);
 
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
-  configDefaultTtl: Duration.minutes(5),
+  configCacheProps: {
+    defaultTtl: Duration.minutes(5),
+  },
   envConfigOriginProps: {
     apiId: previewConfigStage.envApiId,
     apiRegion: primaryEnv.region,
@@ -209,7 +211,9 @@ stack.pipeline.addStage(productionConfigStage, {
 });
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site', {
-  configDefaultTtl: Duration.minutes(5),
+  configCacheProps: {
+    defaultTtl: Duration.minutes(5),
+  },
   envConfigOriginProps: {
     apiId: productionConfigStage.envApiId,
     apiRegion: primaryEnv.region,
