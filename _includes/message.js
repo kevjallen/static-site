@@ -1,7 +1,7 @@
-async function helloMessage(messageConfig) {
-  var config = await fetchConfig(messageConfig);
+async function helloMessage(configPath) {
+  var elementId = 'helloMessage';
 
-  var message = config?.helloMessage || 'Welcome!';
+  var message = await fetchConfig(configPath, elementId) || 'Welcome!';
   
-  document.getElementById('helloMessage').innerText = message;
+  document.getElementById(elementId).innerText = message;
 }

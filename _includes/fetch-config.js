@@ -1,7 +1,7 @@
-async function fetchConfig(path) {
-  const response = await fetch(path);
+async function fetchConfig(path, prop) {
+  var configResponse = await fetch(path);
 
-  if (response.status == 200) {
-    return await response.json();
+  if (configResponse.status == 200) {
+    return (await configResponse.json())[prop];
   }
 }
