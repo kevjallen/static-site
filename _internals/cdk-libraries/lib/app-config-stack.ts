@@ -21,7 +21,7 @@ export interface ApplicationConfigStackProps extends StackProps {
   restApiOptions?: StageOptions
 }
 
-export class ApplicationConfigStack extends Stack {
+export default class ApplicationConfigStack extends Stack {
   public readonly envApiId: string;
 
   public readonly envApiIdExport: string;

@@ -1,0 +1,34 @@
+{
+  "name": "cdk-libraries",
+  "version": "0.1.0",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint ./**/*.ts",
+    "watch": "tsc -w",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.10",
+    "@types/node": "10.17.27",
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "@typescript-eslint/parser": "^5.14.0",
+    "aws-cdk-lib": "^2.15.0",
+    "constructs": "^10.0.0",
+    "eslint": "^8.9.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-import-resolver-typescript": "^2.5.0",
+    "eslint-plugin-cdk": "^1.7.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-jest": "^26.1.0",
+    "jest": "^26.4.2",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^26.2.0",
+    "typescript": "^4.6.2"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.15.0",
+    "constructs": "^10.0.0"
+  }
+}

@@ -3,16 +3,16 @@ import {
 } from 'aws-cdk-lib';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { ApplicationConfigStack, ApplicationConfigStackProps } from './app-config-stack';
+import ApplicationConfigStack, { ApplicationConfigStackProps } from './app-config-stack';
 
 export interface ApplicationConfigEnvStageProps extends StageProps {
   configProps: ApplicationConfigStackProps
 
-  configFailoverProps?: ApplicationConfigStackProps
+  configFailoverProps?: Partial<ApplicationConfigStackProps>
   version?: string
 }
 
-export class ApplicationConfigEnvStage extends Stage {
+export default class ApplicationConfigEnvStage extends Stage {
   public readonly envApiId: string;
 
   public readonly flagsApiId: string;
@@ -34,10 +34,15 @@ export class ApplicationConfigEnvStage extends Stage {
     this.flagsApiId = config.flagsApiIdExport;
 
     if (props.configFailoverProps) {
+      const configFailoverProps = {
+        ...props.configProps,
+        ...props.configFailoverProps,
+      };
+
       const configFailover = new ApplicationConfigStack(
         this,
         'ProviderFailover',
-        props.configFailoverProps,
+        configFailoverProps,
       );
 
       this.envApiIdFailoverParameterName = `/${

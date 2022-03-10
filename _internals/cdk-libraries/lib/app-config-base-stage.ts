@@ -12,7 +12,7 @@ export interface ApplicationConfigBaseStageProps extends StageProps {
   version?: string
 }
 
-export class ApplicationConfigBaseStage extends Stage {
+export default class ApplicationConfigBaseStage extends Stage {
   public readonly appId: string;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigBaseStageProps) {

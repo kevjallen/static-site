@@ -3,7 +3,6 @@ import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, CodeBuildStep } from 'aws-cdk-lib/pipelines';
 import { BuildSpec, IBuildImage, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
-import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface PipelineStackProps extends StackProps {
   sourceConnectionArn: string
@@ -12,7 +11,6 @@ export interface PipelineStackProps extends StackProps {
 
   buildImageFromEcr?: string
   crossAccountKeys?: boolean
-  gitHubTokenSecretName?: string
   installCommands?: string[]
   pipelineName?: string
   publishAssetsInParallel?: boolean
@@ -20,11 +18,10 @@ export interface PipelineStackProps extends StackProps {
   synthCommandShell?: string
   synthEnv?: Record<string, string>
   synthOutputDir?: string
+  triggerOnPush?: boolean
 }
 
-export class PipelineStack extends Stack {
-  private readonly gitHubToken: ISecret | undefined;
-
+export default class PipelineStack extends Stack {
   public readonly pipeline: CodePipeline;
 
   public readonly version: string | undefined;
@@ -45,14 +42,6 @@ export class PipelineStack extends Stack {
 
     const sourceBranch = props.sourceRepoBranch || 'master';
 
-    if (props.gitHubTokenSecretName) {
-      this.gitHubToken = Secret.fromSecretNameV2(
-        this,
-        'GitHubToken',
-        props.gitHubTokenSecretName,
-      );
-    }
-
     this.pipeline = new CodePipeline(this, 'CodePipeline', {
       crossAccountKeys: props.crossAccountKeys === true,
       pipelineName: props.pipelineName,
@@ -66,14 +55,12 @@ export class PipelineStack extends Stack {
         input: CodePipelineSource.connection(props.sourceRepo, sourceBranch, {
           codeBuildCloneOutput: true,
           connectionArn: props.sourceConnectionArn,
+          triggerOnPush: props.triggerOnPush,
         }),
         installCommands: props.installCommands,
         partialBuildSpec: BuildSpec.fromObject({
           env: {
             shell: props.synthCommandShell,
-            'secrets-manager': {
-              GITHUB_TOKEN: this.gitHubToken?.secretArn,
-            },
           },
         }),
         primaryOutputDirectory: props.synthOutputDir,
@@ -82,13 +69,5 @@ export class PipelineStack extends Stack {
     });
 
     this.version = this.node.tryGetContext('version');
-  }
-
-  buildPipeline() {
-    this.pipeline.buildPipeline();
-
-    if (this.gitHubToken) {
-      this.gitHubToken.grantRead(this.pipeline.synthProject);
-    }
   }
 }
