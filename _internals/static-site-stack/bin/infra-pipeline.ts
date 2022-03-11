@@ -45,7 +45,6 @@ const stack = new PipelineStack(app, 'StaticSiteInfraPipeline', {
     `cd ${cdkAppPath}`,
     'npm install',
     'npm run lint',
-    'npm run test',
     'npm run build',
     'npm run cdk synth -- -c version=$CODEBUILD_RESOLVED_SOURCE_VERSION'
       + ' -c mainAccountId=$ACCOUNT_ID --quiet',
