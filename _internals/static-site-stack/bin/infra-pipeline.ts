@@ -17,7 +17,8 @@ const cdkAppPath = '_internals/static-site-stack';
 
 const cdkLibPath = '_internals/cdk-libraries';
 
-const configEnabled = app.node.tryGetContext('configEnabled') === true;
+const configEnabled = app.node.tryGetContext('configEnabled') === true
+  || app.node.tryGetContext('configEnabled') === 'true';
 
 const mainAccountId = app.node.tryGetContext('mainAccountId');
 
@@ -136,7 +137,7 @@ if (configEnabled) {
     );
 
     const configSetupWave = stack.pipeline.addWave('StaticSite-Common-Config');
-    configSetupStages?.map((stage) => configSetupWave.addStage(stage));
+    configSetupStages.map((stage) => configSetupWave.addStage(stage));
   }
 }
 
