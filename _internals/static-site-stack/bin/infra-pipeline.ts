@@ -46,8 +46,10 @@ const stack = new PipelineStack(app, 'StaticSiteInfraPipeline', {
     'npm install',
     'npm run lint',
     'npm run build',
-    'npm run cdk synth -- -c version=$CODEBUILD_RESOLVED_SOURCE_VERSION'
-      + ' -c mainAccountId=$ACCOUNT_ID --quiet',
+    'npm run cdk synth --'
+      + ' -c mainAccountId=$ACCOUNT_ID'
+      + ' -c sourceConnectionArn=$SOURCE_CONNECTION_ARN'
+      + ' -c version=$CODEBUILD_RESOLVED_SOURCE_VERSION',
   ],
   buildImageFromEcr: 'ubuntu-build:v1.1.2',
   env: pipelineEnv,
@@ -59,6 +61,7 @@ const stack = new PipelineStack(app, 'StaticSiteInfraPipeline', {
   synthEnv: {
     ACCOUNT_ID: pipelineEnv.account,
     ASDF_SCRIPT: '/root/.asdf/asdf.sh',
+    SOURCE_CONNECTION_ARN: sourceConnectionArn,
   },
   synthOutputDir: `${cdkAppPath}/cdk.out`,
 });
