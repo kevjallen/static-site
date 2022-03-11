@@ -131,7 +131,7 @@ if (configEnabled) {
       getProductionConfigStageProps(primaryAppId, secondaryAppId),
     );
 
-    const configSetupWave = stack.pipeline.addWave('StaticSite-Config-Common');
+    const configSetupWave = stack.pipeline.addWave('StaticSite-Common-Config');
     configSetupStages?.map((stage) => configSetupWave.addStage(stage));
   }
 }
