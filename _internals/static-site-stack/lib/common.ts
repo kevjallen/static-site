@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Duration, Environment } from 'aws-cdk-lib';
 import { StageOptions } from 'aws-cdk-lib/aws-apigateway';
-import { 
-  CachePolicy, HeadersFrameOption, HeadersReferrerPolicy 
+import {
+  CachePolicy, HeadersFrameOption, HeadersReferrerPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { ApplicationConfigBaseStageProps } from 'cdk-libraries/lib/app-config-base-stage';
