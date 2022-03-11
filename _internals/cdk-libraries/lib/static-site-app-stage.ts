@@ -3,9 +3,9 @@ import {
   PhysicalName,
   RemovalPolicy, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
-import { ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { AddBehaviorOptions, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
 import {
-  HttpOrigin, HttpOriginProps, OriginGroup, OriginGroupProps,
+  HttpOrigin, OriginGroup,
 } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { BlockPublicAccess, Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
@@ -20,7 +20,7 @@ export interface StaticSiteAppStageProps extends StageProps {
 export default class StaticSiteAppStage extends Stage {
   public readonly siteStack: StaticSiteStack;
 
-  public readonly siteFailover: Stack;
+  public readonly siteFailover: Stack | undefined;
 
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
@@ -52,24 +52,26 @@ export default class StaticSiteAppStage extends Stage {
     }
   }
 
-  addHttpOrigin(pathPattern: string, domainName: string, options: HttpOriginProps) {
+  addHttpOrigin(pathPattern: string, origin: HttpOrigin, props?: AddBehaviorOptions) {
     this.siteStack.distribution.addBehavior(
       pathPattern,
-      new HttpOrigin(domainName, options),
+      origin,
       {
         responseHeadersPolicy: this.siteStack.headers,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        ...props,
       },
     );
   }
 
-  addOriginGroup(pathPattern: string, options: OriginGroupProps) {
+  addOriginGroup(pathPattern: string, origin: OriginGroup, props?: AddBehaviorOptions) {
     this.siteStack.distribution.addBehavior(
       pathPattern,
-      new OriginGroup(options),
+      origin,
       {
         responseHeadersPolicy: this.siteStack.headers,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        ...props,
       },
     );
   }

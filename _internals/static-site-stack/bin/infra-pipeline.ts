@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { ManualApprovalStep } from 'aws-cdk-lib/pipelines';
+import ApplicationConfigBaseStage from 'cdk-libraries/lib/app-config-base-stage';
+import ApplicationConfigEnvStage from 'cdk-libraries/lib/app-config-env-stage';
 import PipelineStack from 'cdk-libraries/lib/pipeline-stack';
-import { createConfigSetupStages } from '../lib/common';
-import createPreviewSiteStage from '../lib/stages/preview';
-import createProductionSiteStage from '../lib/stages/production';
+import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
+import {
+  addConfigStageOriginsToSite, configSetupStageProps, primaryEnv, secondaryEnv,
+} from '../lib/common';
+import { getPreviewConfigStageProps, previewSiteStageProps } from '../lib/env-preview';
+import { getProductionConfigStageProps, productionSiteStageProps } from '../lib/env-production';
 
 const app = new cdk.App();
 
 const cdkAppPath = '_internals/static-site-stack';
+
 const cdkLibPath = '_internals/cdk-libraries';
+
+const configEnabled = app.node.tryGetContext('configEnabled') === true;
 
 const mainAccountId = app.node.tryGetContext('mainAccountId');
 
@@ -25,6 +33,7 @@ const pipelineEnv: Required<cdk.Environment> = {
 const stack = new PipelineStack(app, 'StaticSiteInfraPipeline', {
   sourceConnectionArn,
   sourceRepo,
+  sourceRepoBranch: 'refactor',
   synthCommands: [
     `cd ${cdkLibPath}`,
     'npm install',
@@ -55,20 +64,92 @@ const stack = new PipelineStack(app, 'StaticSiteInfraPipeline', {
   synthOutputDir: `${cdkAppPath}/cdk.out`,
 });
 
-const commonStageProps: cdk.StageProps & { version?: string } = {
+const stageProps: cdk.StageProps & { version?: string } = {
   env: { account: mainAccountId },
   version: stack.version,
 };
 
-const setupWave = stack.pipeline.addWave('StaticSite-Setup');
-createConfigSetupStages(app, commonStageProps).map(
-  (setupStage) => setupWave.addStage(setupStage),
-);
+const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
+  ...stageProps,
+  ...previewSiteStageProps,
+  env: {
+    ...stageProps.env,
+    ...primaryEnv,
+  },
+  siteFailoverEnv: {
+    ...stageProps.env,
+    ...secondaryEnv,
+  },
+});
 
-const previewStage = createPreviewSiteStage(app, commonStageProps);
+const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site', {
+  ...stageProps,
+  ...productionSiteStageProps,
+  env: {
+    ...stageProps.env,
+    ...primaryEnv,
+  },
+  siteFailoverEnv: {
+    ...stageProps.env,
+    ...secondaryEnv,
+  },
+});
+
+let configSetupStages: ApplicationConfigBaseStage[] | undefined;
+let previewConfigStage: ApplicationConfigEnvStage | undefined;
+let productionConfigStage: ApplicationConfigEnvStage | undefined;
+
+if (configEnabled) {
+  configSetupStages = [primaryEnv, secondaryEnv].map(
+    (configEnv) => new ApplicationConfigBaseStage(
+      app,
+      `StaticSite-Common-Config-${configEnv.description}`,
+      {
+        ...stageProps,
+        ...configSetupStageProps,
+        env: {
+          ...stageProps.env,
+          ...configEnv,
+        },
+      },
+    ),
+  );
+
+  if (configSetupStages) {
+    const primaryAppId = configSetupStages[0].appId;
+    const secondaryAppId = configSetupStages.at(1)?.appId;
+
+    previewConfigStage = new ApplicationConfigEnvStage(
+      app,
+      'StaticSite-Preview-Config',
+      getPreviewConfigStageProps(primaryAppId, secondaryAppId),
+    );
+
+    productionConfigStage = new ApplicationConfigEnvStage(
+      app,
+      'StaticSite-Production-Config',
+      getProductionConfigStageProps(primaryAppId, secondaryAppId),
+    );
+
+    const configSetupWave = stack.pipeline.addWave('StaticSite-Config-Common');
+    configSetupStages?.map((stage) => configSetupWave.addStage(stage));
+  }
+}
+
+if (previewConfigStage) {
+  stack.pipeline.addStage(previewConfigStage);
+  addConfigStageOriginsToSite(mainAccountId, previewConfigStage, previewStage);
+}
 stack.pipeline.addStage(previewStage);
 
-const productionStage = createProductionSiteStage(app, commonStageProps);
+if (productionConfigStage) {
+  stack.pipeline.addStage(productionConfigStage, {
+    pre: [new ManualApprovalStep('ManualApproval')],
+  });
+  addConfigStageOriginsToSite(mainAccountId, productionConfigStage, productionStage);
+}
 stack.pipeline.addStage(productionStage, {
-  pre: [new ManualApprovalStep('ManualApproval')],
+  pre: productionConfigStage ? [] : [
+    new ManualApprovalStep('ManualApproval'),
+  ],
 });

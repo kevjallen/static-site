@@ -8,7 +8,6 @@ import {
   Code, Function, LayerVersion, Runtime,
 } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
-import { readFileSync } from 'fs';
 
 export interface ApplicationConfigStackProps extends StackProps {
   appId: string
@@ -47,9 +46,30 @@ export default class ApplicationConfigStack extends Stack {
       type: 'AWS.Freeform',
     });
 
-    const functionCode = Code.fromInline(
-      readFileSync('lib/lambda/config.py').toString(),
-    );
+    const functionCode = Code.fromInline(`
+      import json
+      import os
+      from urllib import request
+      
+      def handler(event, context):
+        application = os.environ['CONFIG_APP']
+        environment = os.environ['CONFIG_ENV']
+        config = os.environ['CONFIG_NAME']
+      
+        config_url = f'http://localhost:2772/applications/{application}'
+        config_url += f'/environments/{environment}/configurations/{config}'
+      
+        response = request.urlopen(config_url)
+      
+        return {
+          'body': response.read(),
+          'headers': {
+            'Content-Type': 'application/json'
+          },
+          'isBase64Encoded': False,
+          'statusCode': response.getcode()
+        }
+    `);
 
     const functionHandler = 'index.handler';
 
