@@ -26,7 +26,7 @@ export default class ApplicationConfigEnvStage extends Stage {
 
     const config = new ApplicationConfigStack(
       this,
-      'Provider',
+      'Main',
       props.configProps,
     );
 
@@ -41,7 +41,7 @@ export default class ApplicationConfigEnvStage extends Stage {
 
       const configFailover = new ApplicationConfigStack(
         this,
-        'ProviderFailover',
+        'Failover',
         configFailoverProps,
       );
 
