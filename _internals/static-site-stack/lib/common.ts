@@ -19,14 +19,14 @@ export type StaticSiteEnvironment = Environment & {
 
 export const primaryEnv: StaticSiteEnvironment = {
   region: 'us-east-2',
-  description: 'Primary',
+  description: 'Main',
   configLayerVersionArn:
     'arn:aws:lambda:us-east-2:728743619870:layer:AWS-AppConfig-Extension:47',
 };
 
 export const secondaryEnv: StaticSiteEnvironment = {
   region: 'us-east-1',
-  description: 'Secondary',
+  description: 'Failover',
   configLayerVersionArn:
     'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:61',
 };
