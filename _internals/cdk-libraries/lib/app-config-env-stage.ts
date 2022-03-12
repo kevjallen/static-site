@@ -6,7 +6,9 @@ import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { StaticSiteStack } from '.';
-import ApplicationConfigStack, { ApplicationConfigStackProps } from './app-config-stack';
+import ApplicationConfigStack, {
+  ApplicationConfigStackProps,
+} from './app-config-stack';
 import SSMParameterReader from './ssm-param-reader';
 
 export interface ApplicationConfigEnvStageProps extends StageProps {
@@ -25,11 +27,11 @@ export default class ApplicationConfigEnvStage extends Stage {
 
   public readonly envApiStageName: string | undefined;
 
+  public readonly envApiFailoverIdParameterName: string | undefined;
+
   public readonly flagsApiId: string;
 
   public readonly flagsApiStageName: string | undefined;
-
-  public readonly envApiFailoverIdParameterName: string | undefined;
 
   public readonly flagsApiFailoverIdParameterName: string | undefined;
 
@@ -105,7 +107,7 @@ export default class ApplicationConfigEnvStage extends Stage {
     ) {
       const envApiFailoverIdReader = new SSMParameterReader(
         siteStack,
-        'envApiFailoverIdReader',
+        'EnvApiFailoverIdReader',
         {
           parameterName: this.envApiFailoverIdParameterName,
           region: this.configFailoverStack.region,
@@ -126,7 +128,7 @@ export default class ApplicationConfigEnvStage extends Stage {
       );
       const flagsApiFailoverIdReader = new SSMParameterReader(
         siteStack,
-        'flagsApiFailoverIdReader',
+        'FlagsApiFailoverIdReader',
         {
           parameterName: this.flagsApiFailoverIdParameterName,
           region: this.configFailoverStack.region,
