@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { Stack } from 'aws-cdk-lib';
+import { Arn, Stack } from 'aws-cdk-lib';
 import { BuildSpec, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
-  CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep,
+  CodeBuildStep, CodePipeline, CodePipelineSource,
 } from 'aws-cdk-lib/pipelines';
 import ApplicationConfigBaseStage from 'cdk-libraries/lib/app-config-base-stage';
 import ApplicationConfigEnvStage from 'cdk-libraries/lib/app-config-env-stage';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
 import {
-  cdkAppPath, cdkLibPath,
-  configSetupStageProps, createConfigBehaviorOptions,
-  primaryEnv, secondaryEnv, sourceRepo,
+  cdkAppPath, cdkLibPath, configSetupStageProps,
+  createConfigBehaviorOptions, primaryEnv, secondaryEnv, sourceRepo,
 } from '../lib/common';
 import {
   getPreviewConfigStageProps, previewSiteStageProps,
@@ -174,19 +174,39 @@ if (previewConfigStage) {
 }
 pipeline.addStage(previewStage);
 
+const firstProductionStageName = productionConfigStage?.stageName
+  || productionStage.stageName;
+
+const disableProductionTransition = new CodeBuildStep('DisableTransition', {
+  commands: [
+    'aws codepipeline disable-stage-transition'
+    + ` --pipeline-name ${pipelineName}`
+    + ` --stage-name ${firstProductionStageName}`
+    + ' --transition-type Inbound'
+    + ' --reason "Production"',
+  ],
+  rolePolicyStatements: [
+    new PolicyStatement({
+      actions: [
+        'codepipeline:EnableStageTransition',
+        'codepipeline:DisableStageTransition',
+      ],
+      resources: [
+        Arn.format({
+          account: pipelineStack.account,
+          partition: 'aws',
+          region: pipelineStack.region,
+          resource: pipelineName,
+          service: 'codepipeline',
+        }),
+      ],
+    }),
+  ],
+});
+
 if (productionConfigStage) {
   pipeline.addStage(productionConfigStage, {
-    pre: [
-      new ShellStep('DisableTransition', {
-        commands: [
-          'aws codepipeline disable-stage-transition'
-          + ` --pipeline-name ${pipelineName}`
-          + ` --stage-name ${productionConfigStage.stageName}`
-          + ' --transition-type Inbound'
-          + ' --reason "Production"',
-        ],
-      }),
-    ],
+    pre: [disableProductionTransition],
   });
   productionConfigStage.addConfigOriginsToSite(
     productionStage.siteStack,
@@ -194,17 +214,7 @@ if (productionConfigStage) {
   );
 }
 pipeline.addStage(productionStage, {
-  pre: productionConfigStage ? [] : [
-    new ShellStep('DisableTransition', {
-      commands: [
-        'aws codepipeline disable-stage-transition'
-        + ` --pipeline-name ${pipelineName}`
-        + ` --stage-name ${productionStage.stageName}`
-        + ' --transition-type Inbound'
-        + ' --reason "Production"',
-      ],
-    }),
-  ],
+  pre: productionConfigStage ? [] : [disableProductionTransition],
 });
 
 pipeline.buildPipeline();
@@ -213,7 +223,7 @@ const cfnPipeline = pipeline.pipeline.node.findChild('Resource') as CfnPipeline;
 
 cfnPipeline.addPropertyOverride('DisableInboundStageTransitions', [
   {
-    StageName: productionConfigStage?.stageName || productionStage.stageName,
+    StageName: firstProductionStageName,
     Reason: 'Production',
   },
 ]);
