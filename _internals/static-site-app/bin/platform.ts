@@ -89,6 +89,8 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
     primaryOutputDirectory: `${cdkAppPath}/cdk.out`,
     projectName: 'static-site-platform-synth',
   }),
+  crossAccountKeys: false,
+  publishAssetsInParallel: false,
 });
 
 const stageProps: cdk.StageProps & { version?: string } = {
