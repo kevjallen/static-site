@@ -2,9 +2,10 @@
 import * as cdk from 'aws-cdk-lib';
 import { Stack } from 'aws-cdk-lib';
 import { BuildSpec, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
+import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import {
-  CodeBuildStep, CodePipeline, CodePipelineSource, ManualApprovalStep,
+  CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep,
 } from 'aws-cdk-lib/pipelines';
 import ApplicationConfigBaseStage from 'cdk-libraries/lib/app-config-base-stage';
 import ApplicationConfigEnvStage from 'cdk-libraries/lib/app-config-env-stage';
@@ -28,7 +29,12 @@ const configEnabled = app.node.tryGetContext('configEnabled') === true
 
 const mainAccountId = app.node.tryGetContext('mainAccountId');
 
-const pipelineStack = new Stack(app, 'StaticSitePlatform');
+const pipelineStack = new Stack(app, 'StaticSitePlatformPipeline', {
+  env: {
+    account: mainAccountId,
+    region: 'us-east-2',
+  },
+});
 
 const buildImageRepo = Repository.fromRepositoryName(
   pipelineStack,
@@ -36,8 +42,10 @@ const buildImageRepo = Repository.fromRepositoryName(
   'ubuntu-build',
 );
 
+const pipelineName = 'static-site-platform';
+
 const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
-  pipelineName: 'static-site-platform',
+  pipelineName,
   synth: new CodeBuildStep('Synthesize', {
     buildEnvironment: {
       buildImage: LinuxBuildImage.fromEcrRepository(buildImageRepo, 'v1.1.2'),
@@ -67,7 +75,6 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
     input: CodePipelineSource.connection(sourceRepo, 'master', {
       connectionArn: app.node.tryGetContext('sourceConnectionArn'),
       codeBuildCloneOutput: true,
-      triggerOnPush: false,
     }),
     installCommands: [
       '. $ASDF_SCRIPT && asdf install',
@@ -165,7 +172,17 @@ pipeline.addStage(previewStage);
 
 if (productionConfigStage) {
   pipeline.addStage(productionConfigStage, {
-    pre: [new ManualApprovalStep('ManualApproval')],
+    post: [
+      new ShellStep('DisableTransition', {
+        commands: [
+          'aws codepipeline disable-stage-transition'
+          + ` --pipeline-name ${pipelineName}`
+          + ` --stage-name ${productionConfigStage.stageName}`
+          + ' --transition-type Inbound'
+          + ' --reason "Production"',
+        ],
+      }),
+    ],
   });
   productionConfigStage.addConfigOriginsToSite(
     productionStage.siteStack,
@@ -173,7 +190,27 @@ if (productionConfigStage) {
   );
 }
 pipeline.addStage(productionStage, {
-  pre: productionConfigStage ? [] : [
-    new ManualApprovalStep('ManualApproval'),
+  post: productionConfigStage ? [] : [
+    new ShellStep('DisableTransition', {
+      commands: [
+        'aws codepipeline disable-stage-transition'
+        + ` --pipeline-name ${pipelineName}`
+        + ` --stage-name ${productionStage.stageName}`
+        + ' --transition-type Inbound'
+        + ' --reason "Production"',
+      ],
+    }),
   ],
 });
+
+pipeline.buildPipeline();
+
+const cfnPipeline = pipeline.pipeline.node.findChild('Resource') as CfnPipeline;
+
+cfnPipeline.addPropertyOverride('DisableInboundStageTransitions', [
+  {
+    StageName: productionConfigStage ? 'StaticSite-Production-Config'
+      : 'StaticSite-Production-Site',
+    Reason: 'Production',
+  },
+]);

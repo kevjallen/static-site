@@ -1,8 +1,8 @@
-import { 
-  StaticSiteAppStageProps 
+import {
+  StaticSiteAppStageProps,
 } from 'cdk-libraries/lib/static-site-app-stage';
-import { 
-  ApplicationConfigEnvStageProps 
+import {
+  ApplicationConfigEnvStageProps,
 } from 'cdk-libraries/lib/app-config-env-stage';
 import {
   configRestApiOptions, siteProps, primaryEnv, secondaryEnv,

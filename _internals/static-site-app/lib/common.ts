@@ -2,11 +2,11 @@
 import { Duration, Environment } from 'aws-cdk-lib';
 import { StageOptions } from 'aws-cdk-lib/aws-apigateway';
 import {
-  AddBehaviorOptions,CachePolicy,
+  AddBehaviorOptions, CachePolicy,
   HeadersFrameOption, HeadersReferrerPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
-import { 
-  ApplicationConfigBaseStageProps 
+import {
+  ApplicationConfigBaseStageProps,
 } from 'cdk-libraries/lib/app-config-base-stage';
 import { StaticSiteStackProps } from 'cdk-libraries/lib/static-site-stack';
 import { Construct } from 'constructs';
