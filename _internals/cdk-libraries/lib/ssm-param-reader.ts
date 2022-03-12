@@ -4,14 +4,13 @@ import {
 import { Construct } from 'constructs';
 
 export interface SSMParameterReaderProps {
-  account: string
   parameterName: string
   region: string
 }
 
 export default class SSMParameterReader extends AwsCustomResource {
   constructor(scope: Construct, name: string, props: SSMParameterReaderProps) {
-    const { /* account, */ parameterName, region } = props;
+    const { parameterName, region } = props;
 
     const ssmAwsSdkCall: AwsSdkCall = {
       service: 'SSM',

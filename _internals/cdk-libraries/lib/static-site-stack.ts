@@ -1,46 +1,21 @@
 import {
-  CfnOutput, RemovalPolicy, Stack, StackProps,
+  CfnOutput, Environment, RemovalPolicy, Stack, StackProps,
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import { ICachePolicy, OriginProps } from 'aws-cdk-lib/aws-cloudfront';
+import { AddBehaviorOptions } from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import { IBucket } from 'aws-cdk-lib/aws-s3';
 import * as deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
-import SSMParameterReader from './ssm-param-reader';
 
-export interface FailoverBucketProps {
+export interface FailoverBucketProps extends Environment {
   bucketName: string
-  bucketRegion: string
-}
-
-export interface AppGwOriginProps extends OriginProps {
-  apiId: string
-  apiRegion: string
-}
-
-export interface AddAppGwOriginOptions {
-  originProps: AppGwOriginProps
-
-  cachePolicy?: ICachePolicy
-}
-
-export interface AppGwFailoverOriginProps extends OriginProps {
-  apiIdParameterName: string
-  apiRegion: string
-  parameterReaderId: string
-}
-
-export interface AddAppGwOriginGroupOptions {
-  primaryOriginProps: AppGwOriginProps
-  failoverOriginProps: AppGwFailoverOriginProps
-
-  cachePolicy?: ICachePolicy
 }
 
 interface StaticSiteStackBaseProps extends StackProps {
@@ -63,18 +38,12 @@ export type StaticSiteStackProps = StaticSiteStackBaseProps & (
   )
 );
 
-export function getBucketProps(siteProps?: StaticSiteStackProps) {
-  return {
-    autoDeleteObjects: siteProps?.forceDestroy,
-    blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    removalPolicy: siteProps?.forceDestroy ? RemovalPolicy.DESTROY : undefined,
-  };
-}
-
 export class StaticSiteStack extends Stack {
-  private readonly headers: cloudfront.ResponseHeadersPolicy | undefined;
-
   public readonly distribution: cloudfront.Distribution;
+
+  public readonly headers: cloudfront.ResponseHeadersPolicy | undefined;
+
+  public readonly siteBucket: IBucket;
 
   constructor(scope: Construct, id: string, props?: StaticSiteStackProps) {
     super(scope, id, props);
@@ -116,15 +85,17 @@ export class StaticSiteStack extends Stack {
     const oai = new cloudfront.OriginAccessIdentity(this, 'SiteOAI');
     const oaiS3CanonicalUserId = oai.cloudFrontOriginAccessIdentityS3CanonicalUserId;
 
-    const siteBucket = new s3.Bucket(this, 'SiteBucket', {
-      ...getBucketProps(props),
+    this.siteBucket = new s3.Bucket(this, 'SiteBucket', {
+      autoDeleteObjects: props?.forceDestroy,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: props?.forceDestroy ? RemovalPolicy.DESTROY : undefined,
     });
-    siteBucket.addToResourcePolicy(new iam.PolicyStatement({
+    this.siteBucket.addToResourcePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject'],
-      resources: [siteBucket.arnForObjects('*')],
+      resources: [this.siteBucket.arnForObjects('*')],
       principals: [new iam.CanonicalUserPrincipal(oaiS3CanonicalUserId)],
     }));
-    new CfnOutput(this, 'BucketName', { value: siteBucket.bucketName });
+    new CfnOutput(this, 'BucketName', { value: this.siteBucket.bucketName });
 
     if (props?.responseBehaviors) {
       this.headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteHeaders', {
@@ -135,7 +106,7 @@ export class StaticSiteStack extends Stack {
       });
     }
 
-    const primaryOrigin = new origins.S3Origin(siteBucket, {
+    const primaryOrigin = new origins.S3Origin(this.siteBucket, {
       originAccessIdentity: oai,
     });
 
@@ -144,10 +115,7 @@ export class StaticSiteStack extends Stack {
       const failoverBucket = s3.Bucket.fromBucketAttributes(
         this,
         'FailoverSiteBucket',
-        {
-          bucketName: props.failoverBucket.bucketName,
-          region: props.failoverBucket.bucketRegion,
-        },
+        props.failoverBucket,
       );
 
       const fallbackOrigin = new origins.S3Origin(failoverBucket, {
@@ -190,7 +158,7 @@ export class StaticSiteStack extends Stack {
 
     if (props?.siteContentsPath) {
       new deploy.BucketDeployment(this, 'SiteDeployment', {
-        destinationBucket: siteBucket,
+        destinationBucket: this.siteBucket,
         distribution: this.distribution,
         distributionPaths: ['/*'],
         sources: [deploy.Source.asset(props.siteContentsPath)],
@@ -198,56 +166,34 @@ export class StaticSiteStack extends Stack {
     }
   }
 
-  addAppGwOrigin(
+  addHttpOrigin(
     pathPattern: string,
-    options: AddAppGwOriginOptions,
+    origin: HttpOrigin,
+    props?: AddBehaviorOptions,
   ) {
     this.distribution.addBehavior(
       pathPattern,
-      new HttpOrigin(
-        `${options.originProps.apiId}.execute-api`
-          + `.${options.originProps.apiRegion}.amazonaws.com`,
-        options.originProps,
-      ),
+      origin,
       {
         responseHeadersPolicy: this.headers,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: options.cachePolicy,
+        ...props,
       },
     );
   }
 
-  addAppGwOriginGroup(
+  addOriginGroup(
     pathPattern: string,
-    options: AddAppGwOriginGroupOptions,
+    origin: OriginGroup,
+    props?: AddBehaviorOptions,
   ) {
-    const fallbackApiIdReader = new SSMParameterReader(
-      this,
-      options.failoverOriginProps.parameterReaderId,
-      {
-        account: this.account,
-        parameterName: options.failoverOriginProps.apiIdParameterName,
-        region: options.failoverOriginProps.apiRegion,
-      },
-    );
-
     this.distribution.addBehavior(
       pathPattern,
-      new OriginGroup({
-        primaryOrigin: new HttpOrigin(
-          `${options.primaryOriginProps.apiId}.execute-api`
-            + `.${options.primaryOriginProps.apiRegion}.amazonaws.com`,
-          options.primaryOriginProps,
-        ),
-        fallbackOrigin: new HttpOrigin(
-          `${fallbackApiIdReader.getParameterValue()}.execute-api`
-            + `.${options.failoverOriginProps.apiRegion}.amazonaws.com`,
-          options.failoverOriginProps,
-        ),
-      }),
+      origin,
       {
         responseHeadersPolicy: this.headers,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        ...props,
       },
     );
   }

@@ -8,7 +8,6 @@ import {
   Code, Function, LayerVersion, Runtime,
 } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
-import { readFileSync } from 'fs';
 
 export interface ApplicationConfigStackProps extends StackProps {
   appId: string
@@ -21,14 +20,10 @@ export interface ApplicationConfigStackProps extends StackProps {
   restApiOptions?: StageOptions
 }
 
-export class ApplicationConfigStack extends Stack {
-  public readonly envApiId: string;
+export default class ApplicationConfigStack extends Stack {
+  public readonly envApi: LambdaRestApi;
 
-  public readonly envApiIdExport: string;
-
-  public readonly flagsApiId: string;
-
-  public readonly flagsApiIdExport: string;
+  public readonly flagsApi: LambdaRestApi;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
@@ -47,11 +42,9 @@ export class ApplicationConfigStack extends Stack {
       type: 'AWS.Freeform',
     });
 
-    const functionCode = Code.fromInline(
-      readFileSync('lib/lambda/config.py').toString(),
-    );
+    const functionCode = Code.fromAsset(`${__dirname}/lambda`);
 
-    const functionHandler = 'index.handler';
+    const functionHandler = 'config.handler';
 
     const functionLayers = [
       LayerVersion.fromLayerVersionArn(
@@ -89,7 +82,7 @@ export class ApplicationConfigStack extends Stack {
     });
     envFunction.addToRolePolicy(functionPolicy);
 
-    const envApi = new LambdaRestApi(
+    this.envApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-env-config-api`,
       {
@@ -97,9 +90,6 @@ export class ApplicationConfigStack extends Stack {
         deployOptions: props.restApiOptions,
       },
     );
-
-    this.envApiId = envApi.restApiId;
-    this.envApiIdExport = this.exportValue(envApi.restApiId);
 
     const flagsFunction = new Function(this, 'FlagsFunction', {
       runtime: functionRuntime,
@@ -114,7 +104,7 @@ export class ApplicationConfigStack extends Stack {
     });
     flagsFunction.addToRolePolicy(functionPolicy);
 
-    const flagsApi = new LambdaRestApi(
+    this.flagsApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-flags-config-api`,
       {
@@ -122,7 +112,5 @@ export class ApplicationConfigStack extends Stack {
         deployOptions: props.restApiOptions,
       },
     );
-    this.flagsApiId = flagsApi.restApiId;
-    this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
   }
 }
