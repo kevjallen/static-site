@@ -65,12 +65,14 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
       'npm run cdk synth --'
       + ' -c configEnabled=$CONFIG_ENABLED'
       + ' -c mainAccountId=$ACCOUNT_ID'
+      + ' -c sourceConnectionArn=$SOURCE_CONNECTION_ARN'
       + ' -c version=$CODEBUILD_RESOLVED_SOURCE_VERSION',
     ],
     env: {
+      ACCOUNT_ID: mainAccountId,
       ASDF_SCRIPT: '/root/.asdf/asdf.sh',
       CONFIG_ENABLED: configEnabled ? 'true' : 'false',
-      ACCOUNT_ID: mainAccountId,
+      SOURCE_CONNECTION_ARN: app.node.tryGetContext('sourceConnectionArn'),
     },
     input: CodePipelineSource.connection(sourceRepo, 'master', {
       connectionArn: app.node.tryGetContext('sourceConnectionArn'),
@@ -209,8 +211,7 @@ const cfnPipeline = pipeline.pipeline.node.findChild('Resource') as CfnPipeline;
 
 cfnPipeline.addPropertyOverride('DisableInboundStageTransitions', [
   {
-    StageName: productionConfigStage ? 'StaticSite-Production-Config'
-      : 'StaticSite-Production-Site',
+    StageName: productionConfigStage?.stageName || productionStage.stageName,
     Reason: 'Production',
   },
 ]);
