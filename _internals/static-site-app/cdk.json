@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/infra-pipeline.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/platform.ts",
   "requireApproval": "never",
   "watch": {
     "include": [

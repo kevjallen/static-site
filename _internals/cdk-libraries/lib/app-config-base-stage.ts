@@ -9,6 +9,7 @@ export interface ApplicationConfigBaseStageProps extends StageProps {
 
   appDescription?: string
   flagsProfileName?: string
+
   version?: string
 }
 

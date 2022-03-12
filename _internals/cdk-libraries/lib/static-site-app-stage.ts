@@ -3,10 +3,6 @@ import {
   PhysicalName,
   RemovalPolicy, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
-import { AddBehaviorOptions, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
-import {
-  HttpOrigin, OriginGroup,
-} from 'aws-cdk-lib/aws-cloudfront-origins';
 import { BlockPublicAccess, Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { StaticSiteStack, StaticSiteStackProps } from './static-site-stack';
@@ -50,29 +46,5 @@ export default class StaticSiteAppStage extends Stage {
     if (props?.version) {
       Tags.of(this).add('version', props.version);
     }
-  }
-
-  addHttpOrigin(pathPattern: string, origin: HttpOrigin, props?: AddBehaviorOptions) {
-    this.siteStack.distribution.addBehavior(
-      pathPattern,
-      origin,
-      {
-        responseHeadersPolicy: this.siteStack.headers,
-        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        ...props,
-      },
-    );
-  }
-
-  addOriginGroup(pathPattern: string, origin: OriginGroup, props?: AddBehaviorOptions) {
-    this.siteStack.distribution.addBehavior(
-      pathPattern,
-      origin,
-      {
-        responseHeadersPolicy: this.siteStack.headers,
-        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        ...props,
-      },
-    );
   }
 }

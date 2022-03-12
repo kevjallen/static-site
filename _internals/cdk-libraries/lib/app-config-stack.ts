@@ -21,13 +21,9 @@ export interface ApplicationConfigStackProps extends StackProps {
 }
 
 export default class ApplicationConfigStack extends Stack {
-  public readonly envApiId: string;
+  public readonly envApi: LambdaRestApi;
 
-  public readonly envApiIdExport: string;
-
-  public readonly flagsApiId: string;
-
-  public readonly flagsApiIdExport: string;
+  public readonly flagsApi: LambdaRestApi;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
@@ -46,32 +42,9 @@ export default class ApplicationConfigStack extends Stack {
       type: 'AWS.Freeform',
     });
 
-    const functionCode = Code.fromInline(`
-      import json
-      import os
-      from urllib import request
-      
-      def handler(event, context):
-        application = os.environ['CONFIG_APP']
-        environment = os.environ['CONFIG_ENV']
-        config = os.environ['CONFIG_NAME']
-      
-        config_url = f'http://localhost:2772/applications/{application}'
-        config_url += f'/environments/{environment}/configurations/{config}'
-      
-        response = request.urlopen(config_url)
-      
-        return {
-          'body': response.read(),
-          'headers': {
-            'Content-Type': 'application/json'
-          },
-          'isBase64Encoded': False,
-          'statusCode': response.getcode()
-        }
-    `);
+    const functionCode = Code.fromAsset(`${__dirname}/lambda`);
 
-    const functionHandler = 'index.handler';
+    const functionHandler = 'config.handler';
 
     const functionLayers = [
       LayerVersion.fromLayerVersionArn(
@@ -109,7 +82,7 @@ export default class ApplicationConfigStack extends Stack {
     });
     envFunction.addToRolePolicy(functionPolicy);
 
-    const envApi = new LambdaRestApi(
+    this.envApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-env-config-api`,
       {
@@ -117,9 +90,6 @@ export default class ApplicationConfigStack extends Stack {
         deployOptions: props.restApiOptions,
       },
     );
-
-    this.envApiId = envApi.restApiId;
-    this.envApiIdExport = this.exportValue(envApi.restApiId);
 
     const flagsFunction = new Function(this, 'FlagsFunction', {
       runtime: functionRuntime,
@@ -134,7 +104,7 @@ export default class ApplicationConfigStack extends Stack {
     });
     flagsFunction.addToRolePolicy(functionPolicy);
 
-    const flagsApi = new LambdaRestApi(
+    this.flagsApi = new LambdaRestApi(
       this,
       `${props.restApiPrefix}-flags-config-api`,
       {
@@ -142,7 +112,5 @@ export default class ApplicationConfigStack extends Stack {
         deployOptions: props.restApiOptions,
       },
     );
-    this.flagsApiId = flagsApi.restApiId;
-    this.flagsApiIdExport = this.exportValue(flagsApi.restApiId);
   }
 }

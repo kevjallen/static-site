@@ -2,13 +2,14 @@
   "name": "static-site",
   "version": "0.1.0",
   "bin": {
-    "pipeline": "bin/infra-pipeline.js"
+    "pipeline": "bin/platform.js"
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint ./**/*.ts",
     "watch": "tsc -w",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "cdk:build": "cdk --app='npx ts-node --prefer-ts-exts bin/build.ts'"
   },
   "devDependencies": {
     "@types/jest": "^27.4.0",
