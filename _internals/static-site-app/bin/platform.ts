@@ -197,6 +197,7 @@ const disableProductionTransition = new CodeBuildStep('DisableTransition', {
           partition: 'aws',
           region: pipelineStack.region,
           resource: pipelineName,
+          resourceName: firstProductionStageName,
           service: 'codepipeline',
         }),
       ],
