@@ -45,7 +45,9 @@ const buildImageRepo = Repository.fromRepositoryName(
 const pipelineName = 'static-site-platform';
 
 const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
+  crossAccountKeys: false,
   pipelineName,
+  publishAssetsInParallel: false,
   synth: new CodeBuildStep('Synthesize', {
     buildEnvironment: {
       buildImage: LinuxBuildImage.fromEcrRepository(buildImageRepo, 'v1.1.2'),
@@ -89,8 +91,6 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
     primaryOutputDirectory: `${cdkAppPath}/cdk.out`,
     projectName: 'static-site-platform-synth',
   }),
-  crossAccountKeys: false,
-  publishAssetsInParallel: false,
 });
 
 const stageProps: cdk.StageProps & { version?: string } = {
@@ -176,7 +176,7 @@ pipeline.addStage(previewStage);
 
 if (productionConfigStage) {
   pipeline.addStage(productionConfigStage, {
-    post: [
+    pre: [
       new ShellStep('DisableTransition', {
         commands: [
           'aws codepipeline disable-stage-transition'
@@ -194,7 +194,7 @@ if (productionConfigStage) {
   );
 }
 pipeline.addStage(productionStage, {
-  post: productionConfigStage ? [] : [
+  pre: productionConfigStage ? [] : [
     new ShellStep('DisableTransition', {
       commands: [
         'aws codepipeline disable-stage-transition'
