@@ -95,7 +95,7 @@ const stageProps: cdk.StageProps & { version?: string } = {
   version: app.node.tryGetContext('version'),
 };
 
-const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
+const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
   ...stageProps,
   ...previewSiteStageProps,
   configFailoverProps: !configEnabled ? undefined : {
@@ -115,7 +115,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
   },
 });
 
-const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site', {
+const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   ...stageProps,
   ...productionSiteStageProps,
   configFailoverProps: !configEnabled ? undefined : {
