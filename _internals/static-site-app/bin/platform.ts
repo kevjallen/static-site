@@ -103,6 +103,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
       ...stageProps.env,
       ...secondaryEnv,
     },
+    layerVersionArn: secondaryEnv.configLayerVersionArn,
   },
   configProps: !configEnabled ? undefined : previewConfigStackProps,
   env: {
@@ -123,6 +124,7 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
       ...stageProps.env,
       ...secondaryEnv,
     },
+    layerVersionArn: secondaryEnv.configLayerVersionArn,
   },
   configProps: !configEnabled ? undefined : productionConfigStackProps,
   env: {
