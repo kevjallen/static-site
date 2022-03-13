@@ -2,7 +2,7 @@ import {
   Environment, PhysicalName,
   RemovalPolicy, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
-import { AddBehaviorOptions } from 'aws-cdk-lib/aws-cloudfront';
+import { CachePolicy, CachePolicyProps } from 'aws-cdk-lib/aws-cloudfront';
 import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { BlockPublicAccess, Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
@@ -16,7 +16,7 @@ import {
 } from './static-site-stack';
 
 export interface StaticSiteAppStageProps extends StageProps {
-  configBehaviorOptions?: AddBehaviorOptions
+  configCachePolicyProps?: CachePolicyProps
   configFailoverProps?: Partial<ApplicationConfigStackProps>
   configProps?: ApplicationConfigStackProps
   siteFailoverEnv?: Environment
@@ -74,6 +74,16 @@ export default class StaticSiteAppStage extends Stage {
         this.configStack.getFlagsApiDomainName(),
         { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
       );
+
+      let configCachePolicy: CachePolicy | undefined;
+
+      if (props.configCachePolicyProps) {
+        configCachePolicy = new CachePolicy(
+          this.siteStack,
+          'ConfigCachePolicy',
+          props.configCachePolicyProps,
+        );
+      }
 
       if (props.configFailoverProps?.env?.region) {
         this.configFailover = new ApplicationConfigStack(
@@ -136,22 +146,26 @@ export default class StaticSiteAppStage extends Stage {
         this.siteStack.distribution.addBehavior('/config', new OriginGroup({
           primaryOrigin: primaryEnvOrigin,
           fallbackOrigin: secondaryEnvOrigin,
-        }), props.configBehaviorOptions);
+        }), {
+          cachePolicy: configCachePolicy,
+        });
 
         this.siteStack.distribution.addBehavior('/flags', new OriginGroup({
           primaryOrigin: primaryFlagsOrigin,
           fallbackOrigin: secondaryFlagsOrigin,
-        }), props.configBehaviorOptions);
+        }), {
+          cachePolicy: configCachePolicy,
+        });
       } else {
         this.siteStack.distribution.addBehavior(
           '/config',
           primaryEnvOrigin,
-          props.configBehaviorOptions,
+          { cachePolicy: configCachePolicy },
         );
         this.siteStack.distribution.addBehavior(
           '/flags',
           primaryFlagsOrigin,
-          props.configBehaviorOptions,
+          { cachePolicy: configCachePolicy },
         );
       }
     }

@@ -10,7 +10,8 @@ import {
 } from 'aws-cdk-lib/pipelines';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
 import {
-  cdkAppPath, cdkLibPath, primaryEnv, secondaryEnv, sourceRepo,
+  cdkAppPath, cdkLibPath, configCachePolicyProps,
+  configFailoverStackProps, sourceRepo,
 } from '../lib/common';
 import {
   previewConfigStackProps, previewSiteStageProps,
@@ -98,42 +99,24 @@ const stageProps: cdk.StageProps & { version?: string } = {
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
   ...stageProps,
   ...previewSiteStageProps,
-  configFailoverProps: !configEnabled ? undefined : {
-    env: {
-      ...stageProps.env,
-      ...secondaryEnv,
-    },
-    layerVersionArn: secondaryEnv.configLayerVersionArn,
-  },
+  configCachePolicyProps,
+  configFailoverProps: !configEnabled ? undefined : configFailoverStackProps,
   configProps: !configEnabled ? undefined : previewConfigStackProps,
   env: {
     ...stageProps.env,
-    ...primaryEnv,
-  },
-  siteFailoverEnv: {
-    ...stageProps.env,
-    ...secondaryEnv,
+    ...previewSiteStageProps.env,
   },
 });
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   ...stageProps,
   ...productionSiteStageProps,
-  configFailoverProps: !configEnabled ? undefined : {
-    env: {
-      ...stageProps.env,
-      ...secondaryEnv,
-    },
-    layerVersionArn: secondaryEnv.configLayerVersionArn,
-  },
+  configCachePolicyProps,
+  configFailoverProps: !configEnabled ? undefined : configFailoverStackProps,
   configProps: !configEnabled ? undefined : productionConfigStackProps,
   env: {
     ...stageProps.env,
-    ...primaryEnv,
-  },
-  siteFailoverEnv: {
-    ...stageProps.env,
-    ...secondaryEnv,
+    ...productionSiteStageProps.env,
   },
 });
 

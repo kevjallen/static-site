@@ -3,10 +3,16 @@ import {
 } from 'cdk-libraries/lib/static-site-app-stage';
 import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import {
-  configRestApiOptions, siteProps, primaryEnv,
+  configRestApiOptions, siteProps, primaryEnv, secondaryEnv,
 } from './common';
 
 export const previewSiteStageProps: StaticSiteAppStageProps = {
+  env: {
+    ...primaryEnv,
+  },
+  siteFailoverEnv: {
+    ...secondaryEnv,
+  },
   siteProps: {
     ...siteProps,
     domainName: 'site.kevjallen.com',
@@ -27,6 +33,9 @@ export const previewSiteStageProps: StaticSiteAppStageProps = {
 
 export const previewConfigStackProps: ApplicationConfigStackProps = {
   appName: 'static-site-preview',
+  env: {
+    ...primaryEnv,
+  },
   envName: 'Preview',
   layerVersionArn: primaryEnv.configLayerVersionArn,
   restApiOptions: configRestApiOptions,

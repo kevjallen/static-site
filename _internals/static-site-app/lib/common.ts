@@ -2,15 +2,14 @@
 import { Duration, Environment } from 'aws-cdk-lib';
 import { StageOptions } from 'aws-cdk-lib/aws-apigateway';
 import {
-  AddBehaviorOptions, CachePolicy,
+  CachePolicyProps,
   HeadersFrameOption, HeadersReferrerPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
+import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import { StaticSiteStackProps } from 'cdk-libraries/lib/static-site-stack';
-import { Construct } from 'constructs';
 
 export type StaticSiteEnvironment = Environment & {
   region: string,
-  description: string,
   configLayerVersionArn: string,
 };
 
@@ -22,16 +21,25 @@ export const cdkLibPath = '_internals/cdk-libraries';
 
 export const primaryEnv: StaticSiteEnvironment = {
   region: 'us-east-2',
-  description: 'Main',
   configLayerVersionArn:
     'arn:aws:lambda:us-east-2:728743619870:layer:AWS-AppConfig-Extension:47',
 };
 
 export const secondaryEnv: StaticSiteEnvironment = {
   region: 'us-east-1',
-  description: 'Failover',
   configLayerVersionArn:
     'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:61',
+};
+
+export const configCachePolicyProps: CachePolicyProps = {
+  defaultTtl: Duration.minutes(5),
+};
+
+export const configFailoverStackProps: Partial<ApplicationConfigStackProps> = {
+  env: {
+    ...secondaryEnv,
+  },
+  layerVersionArn: secondaryEnv.configLayerVersionArn,
 };
 
 export const configRestApiOptions: StageOptions = {
@@ -70,11 +78,3 @@ export const siteProps: StaticSiteStackProps = {
     },
   },
 };
-
-export function createConfigBehaviorOptions(scope: Construct): AddBehaviorOptions {
-  return {
-    cachePolicy: new CachePolicy(scope, 'ConfigCachePolicy', {
-      defaultTtl: Duration.minutes(5),
-    }),
-  };
-}
