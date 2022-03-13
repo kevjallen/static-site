@@ -2,7 +2,7 @@ import {
   Stack, StackProps,
 } from 'aws-cdk-lib';
 import { LambdaRestApi, StageOptions } from 'aws-cdk-lib/aws-apigateway';
-import { CfnConfigurationProfile, CfnEnvironment } from 'aws-cdk-lib/aws-appconfig';
+import { CfnApplication, CfnConfigurationProfile, CfnEnvironment } from 'aws-cdk-lib/aws-appconfig';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
   Code, Function, LayerVersion, Runtime,
@@ -10,12 +10,13 @@ import {
 import { Construct } from 'constructs';
 
 export interface ApplicationConfigStackProps extends StackProps {
-  appId: string
+  appName: string
   envName: string
-  envProfileName: string
   layerVersionArn: string
   restApiPrefix: string
 
+  appDescription?: string
+  envProfileName?: string
   flagsProfileName?: string
   restApiOptions?: StageOptions
 }
@@ -28,17 +29,27 @@ export default class ApplicationConfigStack extends Stack {
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
 
-    const { appId } = props;
+    const app = new CfnApplication(this, 'Application', {
+      name: props.appName,
+      description: props.appDescription,
+    });
 
     const env = new CfnEnvironment(this, 'Environment', {
-      applicationId: appId,
+      applicationId: app.ref,
       name: props.envName,
     });
 
-    new CfnConfigurationProfile(this, 'Profile', {
-      applicationId: appId,
+    const flagsProfile = new CfnConfigurationProfile(this, 'FlagsProfile', {
+      applicationId: app.ref,
       locationUri: 'hosted',
-      name: props.envProfileName,
+      name: props.flagsProfileName || 'Flags',
+      type: 'AWS.AppConfig.FeatureFlags',
+    });
+
+    const envProfile = new CfnConfigurationProfile(this, 'EnvProfile', {
+      applicationId: app.ref,
+      locationUri: 'hosted',
+      name: props.envProfileName || props.envName,
       type: 'AWS.Freeform',
     });
 
@@ -61,7 +72,7 @@ export default class ApplicationConfigStack extends Stack {
       ],
       resources: [
         `arn:aws:appconfig:${this.region}:${this.account}:`
-          + `application/${appId}/`
+          + `application/${app.ref}/`
           + `environment/${env.ref}/*`,
       ],
     });
@@ -72,9 +83,9 @@ export default class ApplicationConfigStack extends Stack {
       runtime: functionRuntime,
       code: functionCode,
       environment: {
-        CONFIG_APP: appId,
+        CONFIG_APP: app.ref,
         CONFIG_ENV: props.envName,
-        CONFIG_NAME: props.envProfileName,
+        CONFIG_NAME: envProfile.name,
       },
       handler: functionHandler,
       layers: functionLayers,
@@ -95,9 +106,9 @@ export default class ApplicationConfigStack extends Stack {
       runtime: functionRuntime,
       code: functionCode,
       environment: {
-        CONFIG_APP: appId,
+        CONFIG_APP: app.ref,
         CONFIG_ENV: props.envName,
-        CONFIG_NAME: props.flagsProfileName || 'Flags',
+        CONFIG_NAME: flagsProfile.name,
       },
       handler: functionHandler,
       layers: functionLayers,
@@ -112,5 +123,19 @@ export default class ApplicationConfigStack extends Stack {
         deployOptions: props.restApiOptions,
       },
     );
+  }
+
+  getEnvApiDomainName() {
+    if (this.envApi.domainName?.domainName) {
+      return this.envApi.domainName?.domainName;
+    }
+    return `${this.envApi.restApiId}.execute-api.${this.region}.amazonaws.com`;
+  }
+
+  getFlagsApiDomainName() {
+    if (this.flagsApi.domainName?.domainName) {
+      return this.flagsApi.domainName?.domainName;
+    }
+    return `${this.flagsApi.restApiId}.execute-api.${this.region}.amazonaws.com`;
   }
 }

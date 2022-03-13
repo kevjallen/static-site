@@ -5,9 +5,6 @@ import {
   AddBehaviorOptions, CachePolicy,
   HeadersFrameOption, HeadersReferrerPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
-import {
-  ApplicationConfigBaseStageProps,
-} from 'cdk-libraries/lib/app-config-base-stage';
 import { StaticSiteStackProps } from 'cdk-libraries/lib/static-site-stack';
 import { Construct } from 'constructs';
 
@@ -43,11 +40,6 @@ export const configRestApiOptions: StageOptions = {
   cacheTtl: Duration.minutes(5),
   cachingEnabled: true,
   stageName: 'api',
-};
-
-export const configSetupStageProps: ApplicationConfigBaseStageProps = {
-  appName: 'static-site',
-  appDescription: 'static site runtime config',
 };
 
 export const siteProps: StaticSiteStackProps = {

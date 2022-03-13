@@ -1,15 +1,12 @@
 import {
   StaticSiteAppStageProps,
 } from 'cdk-libraries/lib/static-site-app-stage';
+import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import {
-  ApplicationConfigEnvStageProps,
-} from 'cdk-libraries/lib/app-config-env-stage';
-import {
-  configRestApiOptions, siteProps, primaryEnv, secondaryEnv,
+  configRestApiOptions, siteProps, primaryEnv,
 } from './common';
 
 export const productionSiteStageProps: StaticSiteAppStageProps = {
-  siteFailoverEnv: secondaryEnv,
   siteProps: {
     ...siteProps,
     domainName: 'site.kevjallen.com',
@@ -17,24 +14,10 @@ export const productionSiteStageProps: StaticSiteAppStageProps = {
   },
 };
 
-export function getProductionConfigStageProps(
-  primaryAppId: string,
-  secondaryAppId?: string,
-): ApplicationConfigEnvStageProps {
-  return {
-    configFailoverProps: {
-      appId: secondaryAppId,
-      env: secondaryEnv,
-      layerVersionArn: secondaryEnv.configLayerVersionArn,
-    },
-    configProps: {
-      appId: primaryAppId,
-      envName: 'Production',
-      envProfileName: 'Production',
-      layerVersionArn: primaryEnv.configLayerVersionArn,
-      restApiOptions: configRestApiOptions,
-      restApiPrefix: 'static-site-production',
-    },
-    env: primaryEnv,
-  };
-}
+export const productionConfigStackProps: ApplicationConfigStackProps = {
+  appName: 'static-site-production',
+  envName: 'Production',
+  layerVersionArn: primaryEnv.configLayerVersionArn,
+  restApiOptions: configRestApiOptions,
+  restApiPrefix: 'static-site-production',
+};

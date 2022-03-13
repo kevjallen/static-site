@@ -8,18 +8,15 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
   CodeBuildStep, CodePipeline, CodePipelineSource,
 } from 'aws-cdk-lib/pipelines';
-import ApplicationConfigBaseStage from 'cdk-libraries/lib/app-config-base-stage';
-import ApplicationConfigEnvStage from 'cdk-libraries/lib/app-config-env-stage';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
 import {
-  cdkAppPath, cdkLibPath, configSetupStageProps,
-  createConfigBehaviorOptions, primaryEnv, secondaryEnv, sourceRepo,
+  cdkAppPath, cdkLibPath, primaryEnv, secondaryEnv, sourceRepo,
 } from '../lib/common';
 import {
-  getPreviewConfigStageProps, previewSiteStageProps,
+  previewConfigStackProps, previewSiteStageProps,
 } from '../lib/env-preview';
 import {
-  getProductionConfigStageProps, productionSiteStageProps,
+  productionConfigStackProps, productionSiteStageProps,
 } from '../lib/env-production';
 
 const app = new cdk.App();
@@ -101,6 +98,13 @@ const stageProps: cdk.StageProps & { version?: string } = {
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
   ...stageProps,
   ...previewSiteStageProps,
+  configFailoverProps: !configEnabled ? undefined : {
+    env: {
+      ...stageProps.env,
+      ...secondaryEnv,
+    },
+  },
+  configProps: !configEnabled ? undefined : previewConfigStackProps,
   env: {
     ...stageProps.env,
     ...primaryEnv,
@@ -114,6 +118,13 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview-Site', {
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site', {
   ...stageProps,
   ...productionSiteStageProps,
+  configFailoverProps: !configEnabled ? undefined : {
+    env: {
+      ...stageProps.env,
+      ...secondaryEnv,
+    },
+  },
+  configProps: !configEnabled ? undefined : productionConfigStackProps,
   env: {
     ...stageProps.env,
     ...primaryEnv,
@@ -124,98 +135,38 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production-Site'
   },
 });
 
-let configSetupStages: ApplicationConfigBaseStage[] | undefined;
-let previewConfigStage: ApplicationConfigEnvStage | undefined;
-let productionConfigStage: ApplicationConfigEnvStage | undefined;
-
-if (configEnabled) {
-  configSetupStages = [primaryEnv, secondaryEnv].map(
-    (configEnv) => new ApplicationConfigBaseStage(
-      app,
-      `StaticSite-Common-Config-${configEnv.description}`,
-      {
-        ...stageProps,
-        ...configSetupStageProps,
-        env: {
-          ...stageProps.env,
-          ...configEnv,
-        },
-      },
-    ),
-  );
-
-  if (configSetupStages) {
-    const primaryAppId = configSetupStages[0].appId;
-    const secondaryAppId = configSetupStages.at(1)?.appId;
-
-    previewConfigStage = new ApplicationConfigEnvStage(
-      app,
-      'StaticSite-Preview-Config',
-      getPreviewConfigStageProps(primaryAppId, secondaryAppId),
-    );
-
-    productionConfigStage = new ApplicationConfigEnvStage(
-      app,
-      'StaticSite-Production-Config',
-      getProductionConfigStageProps(primaryAppId, secondaryAppId),
-    );
-
-    const configSetupWave = pipeline.addWave('StaticSite-Common-Config');
-    configSetupStages.map((stage) => configSetupWave.addStage(stage));
-  }
-}
-
-if (previewConfigStage) {
-  pipeline.addStage(previewConfigStage);
-  previewConfigStage.addConfigOriginsToSite(
-    previewStage.siteStack,
-    createConfigBehaviorOptions(previewStage.siteStack),
-  );
-}
 pipeline.addStage(previewStage);
 
-const firstProductionStageName = productionConfigStage?.stageName
-  || productionStage.stageName;
-
-const disableProductionTransition = new CodeBuildStep('DisableTransition', {
-  commands: [
-    'aws codepipeline disable-stage-transition'
-    + ` --pipeline-name ${pipelineName}`
-    + ` --stage-name ${firstProductionStageName}`
-    + ' --transition-type Inbound'
-    + ' --reason "Production"',
-  ],
-  rolePolicyStatements: [
-    new PolicyStatement({
-      actions: [
-        'codepipeline:EnableStageTransition',
-        'codepipeline:DisableStageTransition',
+pipeline.addStage(productionStage, {
+  pre: [
+    new CodeBuildStep('DisableTransition', {
+      commands: [
+        'aws codepipeline disable-stage-transition'
+        + ` --pipeline-name ${pipelineName}`
+        + ` --stage-name ${productionStage.stageName}`
+        + ' --transition-type Inbound'
+        + ' --reason "Production"',
       ],
-      resources: [
-        Arn.format({
-          account: pipelineStack.account,
-          partition: 'aws',
-          region: pipelineStack.region,
-          resource: pipelineName,
-          resourceName: firstProductionStageName,
-          service: 'codepipeline',
+      rolePolicyStatements: [
+        new PolicyStatement({
+          actions: [
+            'codepipeline:EnableStageTransition',
+            'codepipeline:DisableStageTransition',
+          ],
+          resources: [
+            Arn.format({
+              account: pipelineStack.account,
+              partition: 'aws',
+              region: pipelineStack.region,
+              resource: pipelineName,
+              resourceName: productionStage.stageName,
+              service: 'codepipeline',
+            }),
+          ],
         }),
       ],
     }),
   ],
-});
-
-if (productionConfigStage) {
-  pipeline.addStage(productionConfigStage, {
-    pre: [disableProductionTransition],
-  });
-  productionConfigStage.addConfigOriginsToSite(
-    productionStage.siteStack,
-    createConfigBehaviorOptions(productionStage.siteStack),
-  );
-}
-pipeline.addStage(productionStage, {
-  pre: productionConfigStage ? [] : [disableProductionTransition],
 });
 
 pipeline.buildPipeline();
@@ -224,7 +175,7 @@ const cfnPipeline = pipeline.pipeline.node.findChild('Resource') as CfnPipeline;
 
 cfnPipeline.addPropertyOverride('DisableInboundStageTransitions', [
   {
-    StageName: firstProductionStageName,
+    StageName: productionStage.stageName,
     Reason: 'Production',
   },
 ]);

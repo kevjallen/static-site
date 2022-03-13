@@ -3,9 +3,7 @@ import {
 } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import { AddBehaviorOptions } from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import { HttpOrigin, OriginGroup } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
@@ -164,37 +162,5 @@ export class StaticSiteStack extends Stack {
         sources: [deploy.Source.asset(props.siteContentsPath)],
       });
     }
-  }
-
-  addHttpOrigin(
-    pathPattern: string,
-    origin: HttpOrigin,
-    props?: AddBehaviorOptions,
-  ) {
-    this.distribution.addBehavior(
-      pathPattern,
-      origin,
-      {
-        responseHeadersPolicy: this.headers,
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        ...props,
-      },
-    );
-  }
-
-  addOriginGroup(
-    pathPattern: string,
-    origin: OriginGroup,
-    props?: AddBehaviorOptions,
-  ) {
-    this.distribution.addBehavior(
-      pathPattern,
-      origin,
-      {
-        responseHeadersPolicy: this.headers,
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        ...props,
-      },
-    );
   }
 }

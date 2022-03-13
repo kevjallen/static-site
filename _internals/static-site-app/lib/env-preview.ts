@@ -1,16 +1,12 @@
 import {
   StaticSiteAppStageProps,
 } from 'cdk-libraries/lib/static-site-app-stage';
+import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import {
-  ApplicationConfigEnvStageProps,
-} from 'cdk-libraries/lib/app-config-env-stage';
-import {
-  configRestApiOptions, siteProps, primaryEnv, secondaryEnv,
+  configRestApiOptions, siteProps, primaryEnv,
 } from './common';
 
 export const previewSiteStageProps: StaticSiteAppStageProps = {
-  env: primaryEnv,
-  siteFailoverEnv: secondaryEnv,
   siteProps: {
     ...siteProps,
     domainName: 'site.kevjallen.com',
@@ -29,24 +25,10 @@ export const previewSiteStageProps: StaticSiteAppStageProps = {
   },
 };
 
-export function getPreviewConfigStageProps(
-  primaryAppId: string,
-  secondaryAppId?: string,
-): ApplicationConfigEnvStageProps {
-  return {
-    configFailoverProps: {
-      appId: secondaryAppId,
-      env: secondaryEnv,
-      layerVersionArn: secondaryEnv.configLayerVersionArn,
-    },
-    configProps: {
-      appId: primaryAppId,
-      envName: 'Preview',
-      envProfileName: 'Preview',
-      layerVersionArn: primaryEnv.configLayerVersionArn,
-      restApiOptions: configRestApiOptions,
-      restApiPrefix: 'static-site-preview',
-    },
-    env: primaryEnv,
-  };
-}
+export const previewConfigStackProps: ApplicationConfigStackProps = {
+  appName: 'static-site-preview',
+  envName: 'Preview',
+  layerVersionArn: primaryEnv.configLayerVersionArn,
+  restApiOptions: configRestApiOptions,
+  restApiPrefix: 'static-site-preview',
+};
