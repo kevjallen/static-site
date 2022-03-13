@@ -35,7 +35,7 @@ export const configCachePolicyProps: CachePolicyProps = {
   defaultTtl: Duration.minutes(5),
 };
 
-export const configFailoverStackProps: Partial<ApplicationConfigStackProps> = {
+export const configFailoverProps: Partial<ApplicationConfigStackProps> = {
   env: {
     ...secondaryEnv,
   },

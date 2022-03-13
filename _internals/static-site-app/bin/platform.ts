@@ -10,15 +10,10 @@ import {
 } from 'aws-cdk-lib/pipelines';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
 import {
-  cdkAppPath, cdkLibPath, configCachePolicyProps,
-  configFailoverStackProps, sourceRepo,
+  cdkAppPath, cdkLibPath, sourceRepo,
 } from '../lib/common';
-import {
-  previewConfigStackProps, previewSiteStageProps,
-} from '../lib/env-preview';
-import {
-  productionConfigStackProps, productionSiteStageProps,
-} from '../lib/env-production';
+import previewSiteStageProps from '../lib/env-preview';
+import productionSiteStageProps from '../lib/env-production';
 
 const app = new cdk.App();
 
@@ -77,6 +72,7 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
     input: CodePipelineSource.connection(sourceRepo, 'master', {
       connectionArn: app.node.tryGetContext('sourceConnectionArn'),
       codeBuildCloneOutput: true,
+      triggerOnPush: false,
     }),
     installCommands: [
       '. $ASDF_SCRIPT && asdf install',
@@ -99,9 +95,10 @@ const stageProps: cdk.StageProps & { version?: string } = {
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
   ...stageProps,
   ...previewSiteStageProps,
-  configCachePolicyProps,
-  configFailoverProps: !configEnabled ? undefined : configFailoverStackProps,
-  configProps: !configEnabled ? undefined : previewConfigStackProps,
+  configFailoverProps: !configEnabled ? undefined
+    : previewSiteStageProps.configFailoverProps,
+  configProps: !configEnabled ? undefined
+    : previewSiteStageProps.configProps,
   env: {
     ...stageProps.env,
     ...previewSiteStageProps.env,
@@ -111,9 +108,10 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   ...stageProps,
   ...productionSiteStageProps,
-  configCachePolicyProps,
-  configFailoverProps: !configEnabled ? undefined : configFailoverStackProps,
-  configProps: !configEnabled ? undefined : productionConfigStackProps,
+  configFailoverProps: !configEnabled ? undefined
+    : productionSiteStageProps.configFailoverProps,
+  configProps: !configEnabled ? undefined
+    : productionSiteStageProps.configProps,
   env: {
     ...stageProps.env,
     ...productionSiteStageProps.env,

@@ -1,12 +1,24 @@
 import {
   StaticSiteAppStageProps,
 } from 'cdk-libraries/lib/static-site-app-stage';
-import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import {
   configRestApiOptions, siteProps, primaryEnv, secondaryEnv,
+  configCachePolicyProps, configFailoverProps,
 } from './common';
 
-export const previewSiteStageProps: StaticSiteAppStageProps = {
+const previewSiteStageProps: StaticSiteAppStageProps = {
+  configCachePolicyProps,
+  configFailoverProps,
+  configProps: {
+    appName: 'static-site-preview',
+    env: {
+      ...primaryEnv,
+    },
+    envName: 'Preview',
+    layerVersionArn: primaryEnv.configLayerVersionArn,
+    restApiOptions: configRestApiOptions,
+    restApiPrefix: 'static-site-preview',
+  },
   env: {
     ...primaryEnv,
   },
@@ -30,14 +42,4 @@ export const previewSiteStageProps: StaticSiteAppStageProps = {
     subdomain: 'preview',
   },
 };
-
-export const previewConfigStackProps: ApplicationConfigStackProps = {
-  appName: 'static-site-preview',
-  env: {
-    ...primaryEnv,
-  },
-  envName: 'Preview',
-  layerVersionArn: primaryEnv.configLayerVersionArn,
-  restApiOptions: configRestApiOptions,
-  restApiPrefix: 'static-site-preview',
-};
+export default previewSiteStageProps;
