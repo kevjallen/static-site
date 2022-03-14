@@ -20,6 +20,24 @@ const automationEnv: Required<Environment> = {
   region: 'us-east-2',
 };
 
+const buildPipeline = new StaticSitePipelineStack(
+  app,
+  'StaticSiteBuildPipeline',
+  {
+    env: automationEnv,
+    pipelineName: 'static-site-build',
+    sourceConnectionArn,
+    version,
+  },
+);
+
+const buildStage = new StaticSiteBuildStage(app, 'StaticSite-Build', {
+  env: automationEnv,
+  sourceConnectionArn,
+  version,
+});
+buildPipeline.addStage(buildStage);
+
 const platformPipeline = new StaticSitePipelineStack(
   app,
   'StaticSitePlatformPipeline',
@@ -57,16 +75,3 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
 platformPipeline.addAutoDisableStage(productionStage, 'Production');
 
 platformPipeline.buildPipeline();
-
-const buildPipeline = new StaticSitePipelineStack(app, 'StaticSiteBuildPipeline', {
-  env: automationEnv,
-  pipelineName: 'static-site-build',
-  sourceConnectionArn,
-});
-
-const buildStage = new StaticSiteBuildStage(app, 'StaticSite-Build', {
-  env: automationEnv,
-  sourceConnectionArn,
-  version,
-});
-buildPipeline.addStage(buildStage);
