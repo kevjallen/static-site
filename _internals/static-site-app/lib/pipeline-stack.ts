@@ -1,9 +1,7 @@
 import {
   Arn, Stack, StackProps, Stage,
 } from 'aws-cdk-lib';
-import {
-  BuildSpec, LinuxBuildImage,
-} from 'aws-cdk-lib/aws-codebuild';
+import { BuildSpec, LinuxBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
@@ -21,7 +19,7 @@ export interface StageDisabledReason {
   stageName: string
 }
 
-export interface StaticSitePipelineProps extends StackProps {
+export interface StaticSitePipelineStackProps extends StackProps {
   env: {
     account: string
     region?: string
@@ -31,14 +29,14 @@ export interface StaticSitePipelineProps extends StackProps {
   version?: string
 }
 
-export default class StaticSitePipeline extends Stack {
+export default class StaticSitePipelineStack extends Stack {
   private readonly disabled: StageDisabledReason[];
 
   private readonly pipeline: CodePipeline;
 
   private readonly pipelineName: string;
 
-  constructor(scope: Construct, id: string, props: StaticSitePipelineProps) {
+  constructor(scope: Construct, id: string, props: StaticSitePipelineStackProps) {
     super(scope, id, props);
 
     this.disabled = [];
@@ -54,6 +52,7 @@ export default class StaticSitePipeline extends Stack {
     const buildImage = LinuxBuildImage.fromEcrRepository(buildImageRepo, 'v1.1.2');
 
     this.pipeline = new CodePipeline(this, 'Pipeline', {
+      crossAccountKeys: false,
       pipelineName: this.pipelineName,
       publishAssetsInParallel: false,
       synth: new CodeBuildStep('Synthesize', {
@@ -85,6 +84,7 @@ export default class StaticSitePipeline extends Stack {
         input: CodePipelineSource.connection(sourceRepo, 'master', {
           connectionArn: props.sourceConnectionArn,
           codeBuildCloneOutput: true,
+          triggerOnPush: false,
         }),
         installCommands: [
           '. $ASDF_SCRIPT && asdf install',
@@ -112,7 +112,6 @@ export default class StaticSitePipeline extends Stack {
       rolePolicyStatements: [
         new PolicyStatement({
           actions: [
-            'codepipeline:EnableStageTransition',
             'codepipeline:DisableStageTransition',
           ],
           resources: [

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { App, StageProps } from 'aws-cdk-lib';
+import { App, Environment, StageProps } from 'aws-cdk-lib';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
+import StaticSiteBuildStage from '../lib/build-stage';
 import previewStageProps from '../lib/env-preview';
 import productionStageProps from '../lib/env-production';
-import StaticSitePipeline from '../lib/static-site-pipeline';
+import StaticSitePipelineStack from '../lib/pipeline-stack';
 
 const app = new App();
 
@@ -14,15 +15,21 @@ const sourceConnectionArn = app.node.tryGetContext('sourceConnectionArn');
 
 const version = app.node.tryGetContext('version');
 
-const platform = new StaticSitePipeline(app, 'StaticSitePlatformPipeline', {
-  env: {
-    account: mainAccountId,
-    region: 'us-east-2',
+const automationEnv: Required<Environment> = {
+  account: mainAccountId,
+  region: 'us-east-2',
+};
+
+const platformPipeline = new StaticSitePipelineStack(
+  app,
+  'StaticSitePlatformPipeline',
+  {
+    env: automationEnv,
+    sourceConnectionArn,
+    pipelineName: 'static-site-platform',
+    version,
   },
-  sourceConnectionArn,
-  pipelineName: 'static-site-platform',
-  version,
-});
+);
 
 const stageProps: StageProps & { version?: string } = {
   env: { account: mainAccountId },
@@ -37,7 +44,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
     ...previewStageProps.env,
   },
 });
-platform.addStage(previewStage);
+platformPipeline.addStage(previewStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   ...stageProps,
@@ -47,6 +54,19 @@ const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
     ...productionStageProps.env,
   },
 });
-platform.addAutoDisableStage(productionStage, 'Production');
+platformPipeline.addAutoDisableStage(productionStage, 'Production');
 
-platform.buildPipeline();
+platformPipeline.buildPipeline();
+
+const buildPipeline = new StaticSitePipelineStack(app, 'StaticSiteBuildPipeline', {
+  env: automationEnv,
+  pipelineName: 'static-site-build',
+  sourceConnectionArn,
+});
+
+const buildStage = new StaticSiteBuildStage(app, 'StaticSite-Build', {
+  env: automationEnv,
+  sourceConnectionArn,
+  version,
+});
+buildPipeline.addStage(buildStage);
