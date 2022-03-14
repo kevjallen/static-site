@@ -68,7 +68,7 @@ export default class StaticSiteIntegrationStack extends Stack {
       },
     });
 
-    new Project(this, 'AppBuild', {
+    new Project(this, 'SiteBuild', {
       ...integrationProjectProps,
       buildSpec: mergeBuildSpecs(integrationPartialBuildSpec, BuildSpec.fromObject({
         phases: {
@@ -81,7 +81,7 @@ export default class StaticSiteIntegrationStack extends Stack {
           },
         },
       })),
-      projectName: 'static-site-app-build',
+      projectName: 'static-site-integration-build-site',
     });
 
     new Project(this, 'PipelineBuild', {
@@ -114,7 +114,7 @@ export default class StaticSiteIntegrationStack extends Stack {
           },
         },
       })),
-      projectName: 'static-site-pipeline-build',
+      projectName: 'static-site-integration-build-pipelines',
     });
   }
 }

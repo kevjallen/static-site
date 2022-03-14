@@ -74,7 +74,7 @@ export default class StaticSiteArtifactsStack extends Stack {
           name: 'App/$CODEBUILD_RESOLVED_SOURCE_VERSION',
         },
       })),
-      projectName: 'static-site-app-artifacts',
+      projectName: 'static-site-artifacts-build-site',
     });
   }
 }
