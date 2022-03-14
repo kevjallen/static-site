@@ -6,14 +6,11 @@ import {
   configCachePolicyProps, configFailoverProps,
 } from './common';
 
-const productionSiteStageProps: StaticSiteAppStageProps = {
+const productionStageProps: StaticSiteAppStageProps = {
   configCachePolicyProps,
   configFailoverProps,
   configProps: {
     appName: 'static-site-production',
-    env: {
-      ...primaryEnv,
-    },
     envName: 'Production',
     layerVersionArn: primaryEnv.configLayerVersionArn,
     restApiOptions: configRestApiOptions,
@@ -31,4 +28,4 @@ const productionSiteStageProps: StaticSiteAppStageProps = {
     hostedZoneId: 'Z07530401SXAC0E7PID8T',
   },
 };
-export default productionSiteStageProps;
+export default productionStageProps;

@@ -6,14 +6,11 @@ import {
   configCachePolicyProps, configFailoverProps,
 } from './common';
 
-const previewSiteStageProps: StaticSiteAppStageProps = {
+const previewStageProps: StaticSiteAppStageProps = {
   configCachePolicyProps,
   configFailoverProps,
   configProps: {
     appName: 'static-site-preview',
-    env: {
-      ...primaryEnv,
-    },
     envName: 'Preview',
     layerVersionArn: primaryEnv.configLayerVersionArn,
     restApiOptions: configRestApiOptions,
@@ -42,4 +39,4 @@ const previewSiteStageProps: StaticSiteAppStageProps = {
     subdomain: 'preview',
   },
 };
-export default previewSiteStageProps;
+export default previewStageProps;

@@ -2,8 +2,7 @@
 import { Duration, Environment } from 'aws-cdk-lib';
 import { StageOptions } from 'aws-cdk-lib/aws-apigateway';
 import {
-  CachePolicyProps,
-  HeadersFrameOption, HeadersReferrerPolicy,
+  CachePolicyProps, HeadersFrameOption, HeadersReferrerPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { ApplicationConfigStackProps } from 'cdk-libraries/lib/app-config-stack';
 import { StaticSiteStackProps } from 'cdk-libraries/lib/static-site-stack';
