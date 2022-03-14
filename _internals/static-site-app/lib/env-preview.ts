@@ -16,16 +16,10 @@ const previewStageProps: StaticSiteAppStageProps = {
     restApiOptions: configRestApiOptions,
     restApiPrefix: 'static-site-preview',
   },
-  env: {
-    ...primaryEnv,
-  },
-  siteFailoverEnv: {
-    ...secondaryEnv,
-  },
+  env: primaryEnv,
+  siteFailoverEnv: secondaryEnv,
   siteProps: {
     ...siteProps,
-    domainName: 'site.kevjallen.com',
-    hostedZoneId: 'Z07530401SXAC0E7PID8T',
     responseBehaviors: {
       ...siteProps.responseBehaviors,
       customHeaders: [

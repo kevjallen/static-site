@@ -12,11 +12,13 @@ export type StaticSiteEnvironment = Environment & {
   configLayerVersionArn: string,
 };
 
-export const sourceRepo = 'kevjallen/static-site';
-
 export const cdkAppPath = '_internals/static-site-app';
 
 export const cdkLibPath = '_internals/cdk-libraries';
+
+export const domainName = 'site.kevjallen.com';
+
+export const sourceRepo = 'kevjallen/static-site';
 
 export const primaryEnv: StaticSiteEnvironment = {
   region: 'us-east-2',
@@ -35,9 +37,7 @@ export const configCachePolicyProps: CachePolicyProps = {
 };
 
 export const configFailoverProps: Partial<ApplicationConfigStackProps> = {
-  env: {
-    ...secondaryEnv,
-  },
+  env: secondaryEnv,
   layerVersionArn: secondaryEnv.configLayerVersionArn,
 };
 
@@ -50,7 +50,9 @@ export const configRestApiOptions: StageOptions = {
 };
 
 export const siteProps: StaticSiteStackProps = {
+  domainName,
   forceDestroy: true,
+  hostedZoneId: 'Z07530401SXAC0E7PID8T',
   responseBehaviors: {
     securityHeaders: {
       contentTypeOptions: {

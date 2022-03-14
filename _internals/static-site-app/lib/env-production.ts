@@ -16,16 +16,8 @@ const productionStageProps: StaticSiteAppStageProps = {
     restApiOptions: configRestApiOptions,
     restApiPrefix: 'static-site-production',
   },
-  env: {
-    ...primaryEnv,
-  },
-  siteFailoverEnv: {
-    ...secondaryEnv,
-  },
-  siteProps: {
-    ...siteProps,
-    domainName: 'site.kevjallen.com',
-    hostedZoneId: 'Z07530401SXAC0E7PID8T',
-  },
+  env: primaryEnv,
+  siteFailoverEnv: secondaryEnv,
+  siteProps,
 };
 export default productionStageProps;
