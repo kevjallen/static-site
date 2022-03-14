@@ -8,8 +8,8 @@ import { CfnPipeline } from 'aws-cdk-lib/aws-codepipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
-  AddStageOpts,
-  CodeBuildStep, CodePipeline, CodePipelineSource,
+  AddStageOpts, CodeBuildStep, CodePipeline,
+  CodePipelineSource, Step, WaveOptions,
 } from 'aws-cdk-lib/pipelines';
 import { Construct } from 'constructs';
 import {
@@ -32,16 +32,16 @@ export interface StaticSitePipelineProps extends StackProps {
 }
 
 export default class StaticSitePipeline extends Stack {
-  public readonly pipeline: CodePipeline;
+  private readonly disabled: StageDisabledReason[];
 
-  private readonly autoDisableStages: StageDisabledReason[];
+  private readonly pipeline: CodePipeline;
 
   private readonly pipelineName: string;
 
   constructor(scope: Construct, id: string, props: StaticSitePipelineProps) {
     super(scope, id, props);
 
-    this.autoDisableStages = [];
+    this.disabled = [];
 
     this.pipelineName = props.pipelineName;
 
@@ -85,7 +85,6 @@ export default class StaticSitePipeline extends Stack {
         input: CodePipelineSource.connection(sourceRepo, 'master', {
           connectionArn: props.sourceConnectionArn,
           codeBuildCloneOutput: true,
-          triggerOnPush: false,
         }),
         installCommands: [
           '. $ASDF_SCRIPT && asdf install',
@@ -101,44 +100,70 @@ export default class StaticSitePipeline extends Stack {
     });
   }
 
-  addAutoDisableStage(stage: Stage, reason: string, options?: AddStageOpts) {
-    this.pipeline.addStage(stage, {
-      pre: [
-        new CodeBuildStep('DisableTransition', {
-          commands: [
-            'aws codepipeline disable-stage-transition'
-            + ` --pipeline-name ${this.pipelineName}`
-            + ` --stage-name ${stage.stageName}`
-            + ' --transition-type Inbound'
-            + ' --reason "Production"',
+  private getAutoDisableStep(stageName: string, reason: string): Step {
+    return new CodeBuildStep('DisableTransition', {
+      commands: [
+        'aws codepipeline disable-stage-transition'
+        + ` --pipeline-name ${this.pipelineName}`
+        + ` --stage-name ${stageName}`
+        + ' --transition-type Inbound'
+        + ` --reason "${reason}"`,
+      ],
+      rolePolicyStatements: [
+        new PolicyStatement({
+          actions: [
+            'codepipeline:EnableStageTransition',
+            'codepipeline:DisableStageTransition',
           ],
-          rolePolicyStatements: [
-            new PolicyStatement({
-              actions: [
-                'codepipeline:EnableStageTransition',
-                'codepipeline:DisableStageTransition',
-              ],
-              resources: [
-                Arn.format({
-                  account: this.account,
-                  partition: 'aws',
-                  region: this.region,
-                  resource: this.pipelineName,
-                  resourceName: stage.stageName,
-                  service: 'codepipeline',
-                }),
-              ],
+          resources: [
+            Arn.format({
+              account: this.account,
+              partition: 'aws',
+              region: this.region,
+              resource: this.pipelineName,
+              resourceName: stageName,
+              service: 'codepipeline',
             }),
           ],
         }),
-        ...(options?.pre ? options.pre : []),
       ],
-      ...options,
     });
-    this.autoDisableStages.push({
+  }
+
+  addAutoDisableStage(stage: Stage, reason: string, options?: AddStageOpts) {
+    this.disabled.push({
       disabledReason: reason,
       stageName: stage.stageName,
     });
+    return this.pipeline.addStage(stage, {
+      pre: [
+        this.getAutoDisableStep(stage.stageName, reason),
+        ...(options?.pre || []),
+      ],
+      ...options,
+    });
+  }
+
+  addAutoDisableWave(id: string, reason: string, options?: WaveOptions) {
+    this.disabled.push({
+      disabledReason: reason,
+      stageName: id,
+    });
+    return this.pipeline.addWave(id, {
+      pre: [
+        this.getAutoDisableStep(id, reason),
+        ...(options?.pre || []),
+      ],
+      ...options,
+    });
+  }
+
+  addStage(stage: Stage, options?: AddStageOpts) {
+    return this.pipeline.addStage(stage, options);
+  }
+
+  addWave(id: string, options?: WaveOptions) {
+    return this.pipeline.addWave(id, options);
   }
 
   buildPipeline() {
@@ -149,7 +174,7 @@ export default class StaticSitePipeline extends Stack {
     ) as CfnPipeline;
 
     cfnPipeline.addPropertyOverride('DisableInboundStageTransitions', [
-      ...this.autoDisableStages.map(
+      ...this.disabled.map(
         (item) => ({
           Reason: item.disabledReason,
           StageName: item.stageName,

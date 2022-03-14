@@ -43,6 +43,8 @@ export class StaticSiteStack extends Stack {
 
   public readonly siteBucket: IBucket;
 
+  public readonly siteFailoverBucket: IBucket;
+
   constructor(scope: Construct, id: string, props?: StaticSiteStackProps) {
     super(scope, id, props);
 
@@ -110,13 +112,13 @@ export class StaticSiteStack extends Stack {
 
     let originGroup: origins.OriginGroup | undefined;
     if (props?.failoverBucket) {
-      const failoverBucket = s3.Bucket.fromBucketAttributes(
+      this.siteFailoverBucket = s3.Bucket.fromBucketAttributes(
         this,
         'FailoverSiteBucket',
         props.failoverBucket,
       );
 
-      const fallbackOrigin = new origins.S3Origin(failoverBucket, {
+      const fallbackOrigin = new origins.S3Origin(this.siteFailoverBucket, {
         originAccessIdentity: oai,
       });
 
@@ -127,7 +129,7 @@ export class StaticSiteStack extends Stack {
 
       if (props?.siteContentsPath) {
         new deploy.BucketDeployment(this, 'FailoverSiteDeployment', {
-          destinationBucket: failoverBucket,
+          destinationBucket: this.siteFailoverBucket,
           sources: [deploy.Source.asset(props.siteContentsPath)],
         });
       }

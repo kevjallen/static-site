@@ -37,7 +37,7 @@ const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
     ...previewStageProps.env,
   },
 });
-platform.pipeline.addStage(previewStage);
+platform.addStage(previewStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
   ...stageProps,
