@@ -36,6 +36,7 @@ export default class StaticSiteArtifactsStack extends Stack {
     };
 
     const partialBuildSpec = BuildSpec.fromObject({
+      version: 0.2,
       env: {
         shell: 'bash',
         variables: {
@@ -53,7 +54,7 @@ export default class StaticSiteArtifactsStack extends Stack {
 
     this.artifactsBucket = new Bucket(this, 'ArtifactsBucket');
 
-    new Project(this, 'AppArtifactsBuild', {
+    new Project(this, 'SiteArtifactsBuild', {
       ...projectProps,
       artifacts: Artifacts.s3({ bucket: this.artifactsBucket }),
       buildSpec: mergeBuildSpecs(partialBuildSpec, BuildSpec.fromObject({

@@ -45,6 +45,7 @@ export default class StaticSiteIntegrationStack extends Stack {
     };
 
     const integrationPartialBuildSpec = BuildSpec.fromObject({
+      version: 0.2,
       env: {
         shell: 'bash',
         variables: {
