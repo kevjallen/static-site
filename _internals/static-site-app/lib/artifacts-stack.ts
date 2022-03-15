@@ -56,7 +56,7 @@ export default class StaticSiteArtifactsStack extends Stack {
 
     new Project(this, 'SiteArtifactsBuild', {
       ...projectProps,
-      artifacts: Artifacts.s3({ 
+      artifacts: Artifacts.s3({
         bucket: this.artifactsBucket,
         includeBuildId: false,
       }),
