@@ -32,6 +32,8 @@ export const secondaryEnv: StaticSiteEnvironment = {
     'arn:aws:lambda:us-east-1:027255383542:layer:AWS-AppConfig-Extension:61',
 };
 
+export const siteArtifactsPrefix = 'Site';
+
 export const configCachePolicyProps: CachePolicyProps = {
   defaultTtl: Duration.minutes(5),
 };

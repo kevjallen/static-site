@@ -6,7 +6,7 @@ import {
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
-import { sourceRepo } from './common';
+import { siteArtifactsPrefix, sourceRepo } from './common';
 
 export default class StaticSiteArtifactsStack extends Stack {
   public readonly artifactsBucket: IBucket;
@@ -75,7 +75,7 @@ export default class StaticSiteArtifactsStack extends Stack {
             '**/*',
           ],
           'base-directory': '_site',
-          name: 'Site/$CODEBUILD_RESOLVED_SOURCE_VERSION',
+          name: `${siteArtifactsPrefix}/$CODEBUILD_RESOLVED_SOURCE_VERSION`,
         },
       })),
       projectName: 'static-site-artifacts-build-site',

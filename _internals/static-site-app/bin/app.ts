@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-import { App, Environment, StageProps } from 'aws-cdk-lib';
+import { App, Environment } from 'aws-cdk-lib';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
+import StaticSiteDeployStage from 'cdk-libraries/lib/static-site-deploy-stage';
 import StaticSiteBuildStage from '../lib/build-stage';
+import { siteArtifactsPrefix } from '../lib/common';
 import previewStageProps from '../lib/env-preview';
 import productionStageProps from '../lib/env-production';
 import StaticSitePipelineStack from '../lib/pipeline-stack';
@@ -49,29 +51,56 @@ const platformPipeline = new StaticSitePipelineStack(
   },
 );
 
-const stageProps: StageProps & { version?: string } = {
-  env: { account: mainAccountId },
-  version,
-};
-
 const previewStage = new StaticSiteAppStage(app, 'StaticSite-Preview', {
-  ...stageProps,
   ...previewStageProps,
   env: {
-    ...stageProps.env,
     ...previewStageProps.env,
+    account: mainAccountId,
   },
+  version,
 });
 platformPipeline.addStage(previewStage);
 
 const productionStage = new StaticSiteAppStage(app, 'StaticSite-Production', {
-  ...stageProps,
   ...productionStageProps,
   env: {
-    ...stageProps.env,
     ...productionStageProps.env,
+    account: mainAccountId,
   },
+  version,
 });
 platformPipeline.addAutoDisableStage(productionStage, 'Production');
 
 platformPipeline.buildPipeline();
+
+const deployPipeline = new StaticSitePipelineStack(
+  app,
+  'StaticSiteDeployPipeline',
+  {
+    env: automationEnv,
+    pipelineName: 'static-site-deploy',
+    sourceConnectionArn,
+  },
+);
+
+const previewDeployStage = new StaticSiteDeployStage(
+  app,
+  'StaticSite-PreviewDeploy',
+  {
+    artifactsBucketName: buildStage.artifacts.exportValue(
+      buildStage.artifacts.artifactsBucket.bucketName,
+    ),
+    artifactsPrefix: siteArtifactsPrefix,
+    env: {
+      account: previewStage.account,
+      region: previewStage.region,
+    },
+    siteBucketName: previewStage.siteStack.exportValue(
+      previewStage.siteStack.siteBucket.bucketName,
+    ),
+    siteDistributionId: previewStage.siteStack.exportValue(
+      previewStage.siteStack.distribution.distributionId,
+    ),
+  },
+);
+deployPipeline.addStage(previewDeployStage);
