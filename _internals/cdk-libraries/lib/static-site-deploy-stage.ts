@@ -23,7 +23,7 @@ export default class StaticSiteDeployStage extends Stage {
   constructor(scope: Construct, id: string, props: StaticSiteDeployStageProps) {
     super(scope, id, props);
 
-    const deployStack = new Stack(this, 'SiteDeploy');
+    const deployStack = new Stack(this, 'Stack');
 
     const artifactsBucket = Bucket.fromBucketAttributes(
       deployStack,
