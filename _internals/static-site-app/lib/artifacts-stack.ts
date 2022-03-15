@@ -56,7 +56,10 @@ export default class StaticSiteArtifactsStack extends Stack {
 
     new Project(this, 'SiteArtifactsBuild', {
       ...projectProps,
-      artifacts: Artifacts.s3({ bucket: this.artifactsBucket }),
+      artifacts: Artifacts.s3({ 
+        bucket: this.artifactsBucket,
+        includeBuildId: false,
+      }),
       buildSpec: mergeBuildSpecs(partialBuildSpec, BuildSpec.fromObject({
         phases: {
           build: {
@@ -72,7 +75,7 @@ export default class StaticSiteArtifactsStack extends Stack {
             '**/*',
           ],
           'base-directory': '_site',
-          name: 'App/$CODEBUILD_RESOLVED_SOURCE_VERSION',
+          name: 'Site/$CODEBUILD_RESOLVED_SOURCE_VERSION',
         },
       })),
       projectName: 'static-site-artifacts-build-site',
