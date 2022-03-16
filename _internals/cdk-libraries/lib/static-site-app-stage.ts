@@ -29,17 +29,19 @@ export default class StaticSiteAppStage extends Stage {
 
   public readonly siteBucketName: string;
 
-  public readonly failoverBucketName: string;
+  public readonly failoverBucketName: string | undefined;
 
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
 
     let failoverBucket: IBucket | undefined;
+    let siteFailoverStack: Stack | undefined;
+
     if (props?.siteFailoverEnv) {
-      const siteFailover = new Stack(this, 'SiteFailover', {
+      siteFailoverStack = new Stack(this, 'SiteFailover', {
         env: props.siteFailoverEnv,
       });
-      failoverBucket = new Bucket(siteFailover, 'SiteBucket', {
+      failoverBucket = new Bucket(siteFailoverStack, 'SiteBucket', {
         autoDeleteObjects: props.siteProps?.forceDestroy,
         blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
         bucketName: PhysicalName.GENERATE_IF_NEEDED,
@@ -174,8 +176,8 @@ export default class StaticSiteAppStage extends Stage {
     this.siteBucketName = siteStack.exportValue(
       siteStack.siteBucket.bucketName,
     );
-    this.failoverBucketName = siteStack.exportValue(
-      siteStack.siteFailoverBucket.bucketName,
+    this.failoverBucketName = siteFailoverStack?.exportValue(
+      failoverBucket?.bucketName,
     );
 
     if (props?.version) {
