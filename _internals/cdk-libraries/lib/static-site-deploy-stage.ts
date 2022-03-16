@@ -160,7 +160,7 @@ export default class StaticSiteDeployStage extends Stage {
           ...(!props.deployPrefix ? [
             bucket?.arnForObjects('/*'),
           ] : [
-            bucket?.arnForObjects(`${props.artifactsPrefix}/*`),
+            bucket?.arnForObjects(`${props.deployPrefix}/*`),
           ]),
         ]))
         .reduce((flat, resource) => flat.concat(resource)),
