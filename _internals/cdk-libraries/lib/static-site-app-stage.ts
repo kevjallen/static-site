@@ -1,5 +1,6 @@
 import {
-  Environment, PhysicalName,
+  Environment,
+  PhysicalName,
   RemovalPolicy, Stack, Stage, StageProps, Tags,
 } from 'aws-cdk-lib';
 import { CachePolicy, CachePolicyProps } from 'aws-cdk-lib/aws-cloudfront';
@@ -29,7 +30,7 @@ export default class StaticSiteAppStage extends Stage {
 
   public readonly siteBucketName: string;
 
-  public readonly failoverBucketName: string | undefined;
+  public readonly siteFailoverBucketParamName: string | undefined;
 
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
@@ -48,6 +49,16 @@ export default class StaticSiteAppStage extends Stage {
         removalPolicy: props.siteProps?.forceDestroy
           ? RemovalPolicy.DESTROY : undefined,
       });
+      const siteFailoverBucketParam = new StringParameter(
+        siteFailoverStack,
+        'SiteFailoverBucketNameParam',
+        {
+          parameterName: PhysicalName.GENERATE_IF_NEEDED,
+          simpleName: true,
+          stringValue: failoverBucket.bucketName,
+        },
+      );
+      this.siteFailoverBucketParamName = siteFailoverBucketParam.parameterName;
     }
 
     const siteStack = new StaticSiteStack(this, 'Site', {
@@ -175,9 +186,6 @@ export default class StaticSiteAppStage extends Stage {
     );
     this.siteBucketName = siteStack.exportValue(
       siteStack.siteBucket.bucketName,
-    );
-    this.failoverBucketName = siteFailoverStack?.exportValue(
-      failoverBucket?.bucketName,
     );
 
     if (props?.version) {

@@ -4,15 +4,16 @@ import {
 } from 'aws-cdk-lib';
 import { BuildSpec, Project } from 'aws-cdk-lib/aws-codebuild';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import SSMParameterReader from './ssm-param-reader';
 
 export interface StaticSiteDeployStageProps extends StageProps {
   artifactsBucketName: string
   artifactsBucketEnv?: Environment
   artifactsPrefix?: string
   deployPrefix?: string
-  failoverBucketName?: string
+  failoverBucketParamName?: string
   failoverBucketEnv?: Environment
   invalidationPath?: string
   projectName?: string
@@ -45,26 +46,41 @@ export default class StaticSiteDeployStage extends Stage {
       },
     );
 
-    const failoverBucket = Bucket.fromBucketAttributes(
-      deployStack,
-      'FailoverBucket',
-      {
-        ...props.failoverBucketEnv,
-        bucketName: props.failoverBucketName,
-      },
-    );
+    let siteFailoverBucket: IBucket | undefined;
+
+    if (props.failoverBucketParamName && props.failoverBucketEnv?.region) {
+      const failoverBucketParamReader = new SSMParameterReader(
+        deployStack,
+        'SiteFailoverBucketNameParamReader',
+        {
+          parameterName: props.failoverBucketParamName,
+          region: props.failoverBucketEnv.region,
+        },
+      );
+
+      siteFailoverBucket = Bucket.fromBucketAttributes(
+        deployStack,
+        'SiteFailoverBucket',
+        {
+          ...props.failoverBucketEnv,
+          bucketName: failoverBucketParamReader.getParameterValue(),
+        },
+      );
+    }
 
     const artifactsPath = artifactsBucket.s3UrlForObject(props.artifactsPrefix);
 
     const siteDeployPath = siteBucket.s3UrlForObject(props.deployPrefix);
 
-    const failoverDeployPath = failoverBucket.s3UrlForObject(props.deployPrefix);
+    const failoverDeployPath = siteFailoverBucket?.s3UrlForObject(props.deployPrefix);
 
     const deployProject = new Project(deployStack, 'DeployProject', {
       environmentVariables: {
+        ...(!failoverDeployPath ? {} : {
+          FAILOVER_DEPLOY_PATH: { value: failoverDeployPath },
+        }),
         ARTIFACTS_PATH: { value: artifactsPath },
         DISTRIBUTION_ID: { value: props.siteDistributionId },
-        FAILOVER_DEPLOY_PATH: { value: failoverDeployPath },
         INVALIDATION_PATH: { value: props.invalidationPath || '/*' },
         SITE_DEPLOY_PATH: { value: siteDeployPath },
         VERSION: { value: 'latest' },
@@ -81,8 +97,9 @@ export default class StaticSiteDeployStage extends Stage {
               'unzip artifact.zip -d artifact',
               'aws s3 rm --recursive "$SITE_DEPLOY_PATH/"',
               'aws s3 sync artifact "$SITE_DEPLOY_PATH/"',
-              'aws s3 rm --recursive "$FAILOVER_DEPLOY_PATH/"',
-              'aws s3 sync artifact "$FAILOVER_DEPLOY_PATH/"',
+              'if [ ! -z "$FAILOVER_DEPLOY_PATH" ]; then'
+                + ' aws s3 rm --recursive "$FAILOVER_DEPLOY_PATH/";',
+              +' aws s3 sync artifact "$FAILOVER_DEPLOY_PATH/"; fi',
               'INVALIDATION=$(aws cloudfront create-invalidation'
                 + ' --distribution-id "$DISTRIBUTION_ID"'
                 + ' --path "$INVALIDATION_PATH"'
@@ -131,22 +148,24 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
-    siteBucket.addToResourcePolicy(new PolicyStatement({
-      actions: [
-        's3:DeleteObject',
-        's3:GetObject',
-        's3:ListBucket',
-        's3:PutObject',
-      ],
-      principals: [deployProject.grantPrincipal],
-      resources: [
-        siteBucket.bucketArn,
-        ...(!props.deployPrefix ? [
-          siteBucket.arnForObjects('/*'),
-        ] : [
-          siteBucket.arnForObjects(`${props.artifactsPrefix}/*`),
-        ]),
-      ],
-    }));
+    [siteBucket, siteFailoverBucket].map(
+      (bucket) => bucket?.addToResourcePolicy(new PolicyStatement({
+        actions: [
+          's3:DeleteObject',
+          's3:GetObject',
+          's3:ListBucket',
+          's3:PutObject',
+        ],
+        principals: [deployProject.grantPrincipal],
+        resources: [
+          bucket.bucketArn,
+          ...(!props.deployPrefix ? [
+            bucket.arnForObjects('/*'),
+          ] : [
+            bucket.arnForObjects(`${props.artifactsPrefix}/*`),
+          ]),
+        ],
+      })),
+    );
   }
 }
