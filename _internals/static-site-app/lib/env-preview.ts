@@ -18,6 +18,8 @@ const previewStageProps: StaticSiteAppStageProps = {
   },
   env: primaryEnv,
   siteFailoverEnv: secondaryEnv,
+  siteFailoverBucketParamName:
+    'static-site-preview-site-failover-bucket-name',
   siteProps: {
     ...siteProps,
     responseBehaviors: {

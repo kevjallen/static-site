@@ -18,6 +18,8 @@ const productionStageProps: StaticSiteAppStageProps = {
   },
   env: primaryEnv,
   siteFailoverEnv: secondaryEnv,
+  siteFailoverBucketParamName:
+    'static-site-production-site-failover-bucket-name',
   siteProps,
 };
 export default productionStageProps;

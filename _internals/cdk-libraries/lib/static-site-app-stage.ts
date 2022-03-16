@@ -21,6 +21,7 @@ export interface StaticSiteAppStageProps extends StageProps {
   configFailoverProps?: Partial<ApplicationConfigStackProps>
   configProps?: ApplicationConfigStackProps
   siteFailoverEnv?: Environment
+  siteFailoverBucketParamName?: string
   siteProps?: Omit<StaticSiteStackProps, 'failoverBucket'>
   version?: string
 }
@@ -29,8 +30,6 @@ export default class StaticSiteAppStage extends Stage {
   public readonly distributionId: string;
 
   public readonly siteBucketName: string;
-
-  public readonly siteFailoverBucketParamName: string | undefined;
 
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
@@ -49,16 +48,16 @@ export default class StaticSiteAppStage extends Stage {
         removalPolicy: props.siteProps?.forceDestroy
           ? RemovalPolicy.DESTROY : undefined,
       });
-      const siteFailoverBucketParam = new StringParameter(
-        siteFailoverStack,
-        'SiteFailoverBucketNameParam',
-        {
-          parameterName: PhysicalName.GENERATE_IF_NEEDED,
-          simpleName: true,
-          stringValue: failoverBucket.bucketName,
-        },
-      );
-      this.siteFailoverBucketParamName = siteFailoverBucketParam.parameterName;
+      if (props.siteFailoverBucketParamName) {
+        new StringParameter(
+          siteFailoverStack,
+          'SiteFailoverBucketNameParam',
+          {
+            parameterName: props.siteFailoverBucketParamName,
+            stringValue: failoverBucket.bucketName,
+          },
+        );
+      }
     }
 
     const siteStack = new StaticSiteStack(this, 'Site', {

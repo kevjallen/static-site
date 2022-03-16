@@ -93,7 +93,7 @@ const previewDeployStage = new StaticSiteDeployStage(
       account: previewStage.account,
       region: previewStage.region,
     },
-    failoverBucketParamName: previewStage.siteFailoverBucketParamName,
+    failoverBucketParamName: previewStageProps.siteFailoverBucketParamName,
     failoverBucketEnv: {
       region: previewStageProps.siteFailoverEnv?.region,
     },
