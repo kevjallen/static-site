@@ -140,7 +140,7 @@ export default class StaticSiteDeployStage extends Stage {
       resources: [
         artifactsBucket.bucketArn,
         ...(!props.artifactsPrefix ? [
-          artifactsBucket.arnForObjects('/*'),
+          artifactsBucket.arnForObjects('*'),
         ] : [
           artifactsBucket.arnForObjects(`${props.artifactsPrefix}/*`),
         ]),
@@ -158,7 +158,7 @@ export default class StaticSiteDeployStage extends Stage {
         .map((bucket) => (!bucket ? [] : [
           bucket?.bucketArn,
           ...(!props.deployPrefix ? [
-            bucket?.arnForObjects('/*'),
+            bucket?.arnForObjects('*'),
           ] : [
             bucket?.arnForObjects(`${props.deployPrefix}/*`),
           ]),
