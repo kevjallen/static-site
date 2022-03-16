@@ -25,23 +25,21 @@ export interface StaticSiteAppStageProps extends StageProps {
 }
 
 export default class StaticSiteAppStage extends Stage {
-  public readonly configStack: ApplicationConfigStack | undefined;
+  public readonly distributionId: string;
 
-  public readonly configFailover: ApplicationConfigStack | undefined;
+  public readonly siteBucketName: string;
 
-  public readonly siteStack: StaticSiteStack;
-
-  public readonly siteFailover: Stack | undefined;
+  public readonly failoverBucketName: string;
 
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
 
     let failoverBucket: IBucket | undefined;
     if (props?.siteFailoverEnv) {
-      this.siteFailover = new Stack(this, 'SiteFailover', {
+      const siteFailover = new Stack(this, 'SiteFailover', {
         env: props.siteFailoverEnv,
       });
-      failoverBucket = new Bucket(this.siteFailover, 'SiteBucket', {
+      failoverBucket = new Bucket(siteFailover, 'SiteBucket', {
         autoDeleteObjects: props.siteProps?.forceDestroy,
         blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
         bucketName: PhysicalName.GENERATE_IF_NEEDED,
@@ -50,7 +48,7 @@ export default class StaticSiteAppStage extends Stage {
       });
     }
 
-    this.siteStack = new StaticSiteStack(this, 'Site', {
+    const siteStack = new StaticSiteStack(this, 'Site', {
       ...props?.siteProps as StaticSiteStackProps,
       failoverBucket: !failoverBucket ? undefined : {
         account: failoverBucket.stack.account,
@@ -60,18 +58,18 @@ export default class StaticSiteAppStage extends Stage {
     });
 
     if (props?.configProps) {
-      this.configStack = new ApplicationConfigStack(
+      const configStack = new ApplicationConfigStack(
         this,
         'Config',
         props.configProps,
       );
       const primaryEnvOrigin = new HttpOrigin(
-        this.configStack.getEnvApiDomainName(),
+        configStack.getEnvApiDomainName(),
         { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
       );
 
       const primaryFlagsOrigin = new HttpOrigin(
-        this.configStack.getFlagsApiDomainName(),
+        configStack.getFlagsApiDomainName(),
         { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
       );
 
@@ -79,14 +77,14 @@ export default class StaticSiteAppStage extends Stage {
 
       if (props.configCachePolicyProps) {
         configCachePolicy = new CachePolicy(
-          this.siteStack,
+          siteStack,
           'ConfigCachePolicy',
           props.configCachePolicyProps,
         );
       }
 
       if (props.configFailoverProps?.env?.region) {
-        this.configFailover = new ApplicationConfigStack(
+        const configFailover = new ApplicationConfigStack(
           this,
           'ConfigFailover',
           {
@@ -102,21 +100,21 @@ export default class StaticSiteAppStage extends Stage {
         const envApiFailoverDomainParamName = `${
           props.configProps.restApiPrefix}-env-config-failover-domain`;
 
-        new StringParameter(this.configFailover, 'EnvApiFailoverDomainParam', {
+        new StringParameter(configFailover, 'EnvApiFailoverDomainParam', {
           parameterName: envApiFailoverDomainParamName,
-          stringValue: this.configFailover.getEnvApiDomainName(),
+          stringValue: configFailover.getEnvApiDomainName(),
         });
 
         const flagsApiFailoverDomainParamName = `${
           props.configProps.restApiPrefix}-flags-config-failover-domain`;
 
-        new StringParameter(this.configFailover, 'FlagsApiFailoverDomainParam', {
+        new StringParameter(configFailover, 'FlagsApiFailoverDomainParam', {
           parameterName: flagsApiFailoverDomainParamName,
-          stringValue: this.configFailover.getFlagsApiDomainName(),
+          stringValue: configFailover.getFlagsApiDomainName(),
         });
 
         const envApiFailoverDomainReader = new SSMParameterReader(
-          this.siteStack,
+          siteStack,
           'EnvApiFailoverDomainReader',
           {
             region: props.configFailoverProps.env.region,
@@ -125,7 +123,7 @@ export default class StaticSiteAppStage extends Stage {
         );
 
         const flagsApiFailoverDomainReader = new SSMParameterReader(
-          this.siteStack,
+          siteStack,
           'FlagsApiFailoverDomainReader',
           {
             region: props.configFailoverProps.env.region,
@@ -143,32 +141,42 @@ export default class StaticSiteAppStage extends Stage {
           { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
         );
 
-        this.siteStack.distribution.addBehavior('/config', new OriginGroup({
+        siteStack.distribution.addBehavior('/config', new OriginGroup({
           primaryOrigin: primaryEnvOrigin,
           fallbackOrigin: secondaryEnvOrigin,
         }), {
           cachePolicy: configCachePolicy,
         });
 
-        this.siteStack.distribution.addBehavior('/flags', new OriginGroup({
+        siteStack.distribution.addBehavior('/flags', new OriginGroup({
           primaryOrigin: primaryFlagsOrigin,
           fallbackOrigin: secondaryFlagsOrigin,
         }), {
           cachePolicy: configCachePolicy,
         });
       } else {
-        this.siteStack.distribution.addBehavior(
+        siteStack.distribution.addBehavior(
           '/config',
           primaryEnvOrigin,
           { cachePolicy: configCachePolicy },
         );
-        this.siteStack.distribution.addBehavior(
+        siteStack.distribution.addBehavior(
           '/flags',
           primaryFlagsOrigin,
           { cachePolicy: configCachePolicy },
         );
       }
     }
+
+    this.distributionId = siteStack.exportValue(
+      siteStack.distribution.distributionId,
+    );
+    this.siteBucketName = siteStack.exportValue(
+      siteStack.siteBucket.bucketName,
+    );
+    this.failoverBucketName = siteStack.exportValue(
+      siteStack.siteFailoverBucket.bucketName,
+    );
 
     if (props?.version) {
       Tags.of(this).add('version', props.version);

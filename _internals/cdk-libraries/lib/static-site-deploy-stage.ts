@@ -12,6 +12,8 @@ export interface StaticSiteDeployStageProps extends StageProps {
   artifactsBucketEnv?: Environment
   artifactsPrefix?: string
   deployPrefix?: string
+  failoverBucketName?: string
+  failoverBucketEnv?: Environment
   invalidationPath?: string
   projectName?: string
   siteBucketName: string
@@ -43,16 +45,28 @@ export default class StaticSiteDeployStage extends Stage {
       },
     );
 
+    const failoverBucket = Bucket.fromBucketAttributes(
+      deployStack,
+      'FailoverBucket',
+      {
+        ...props.failoverBucketEnv,
+        bucketName: props.failoverBucketName,
+      },
+    );
+
     const artifactsPath = artifactsBucket.s3UrlForObject(props.artifactsPrefix);
 
-    const deployPath = artifactsBucket.s3UrlForObject(props.deployPrefix);
+    const siteDeployPath = siteBucket.s3UrlForObject(props.deployPrefix);
+
+    const failoverDeployPath = failoverBucket.s3UrlForObject(props.deployPrefix);
 
     const deployProject = new Project(deployStack, 'DeployProject', {
       environmentVariables: {
         ARTIFACTS_PATH: { value: artifactsPath },
-        DEPLOY_PATH: { value: deployPath },
         DISTRIBUTION_ID: { value: props.siteDistributionId },
+        FAILOVER_DEPLOY_PATH: { value: failoverDeployPath },
         INVALIDATION_PATH: { value: props.invalidationPath || '/*' },
+        SITE_DEPLOY_PATH: { value: siteDeployPath },
         VERSION: { value: 'latest' },
       },
       buildSpec: BuildSpec.fromObject({
@@ -65,8 +79,10 @@ export default class StaticSiteDeployStage extends Stage {
                 + ' | sort | tail -n 1 | awk \'{print $4}\'); fi',
               'aws s3 cp "$ARTIFACTS_PATH/$VERSION" artifact.zip',
               'unzip artifact.zip -d artifact',
-              'aws s3 rm --recursive "$DEPLOY_PATH/"',
-              'aws s3 sync artifact "$DEPLOY_PATH/"',
+              'aws s3 rm --recursive "$SITE_DEPLOY_PATH/"',
+              'aws s3 sync artifact "$SITE_DEPLOY_PATH/"',
+              'aws s3 rm --recursive "$FAILOVER_DEPLOY_PATH/"',
+              'aws s3 sync artifact "$FAILOVER_DEPLOY_PATH/"',
               'INVALIDATION=$(aws cloudfront create-invalidation'
                 + ' --distribution-id "$DISTRIBUTION_ID"'
                 + ' --path "$INVALIDATION_PATH"'
@@ -99,6 +115,22 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
+    artifactsBucket.addToResourcePolicy(new PolicyStatement({
+      actions: [
+        's3:GetObject',
+        's3:ListBucket',
+      ],
+      principals: [deployProject.grantPrincipal],
+      resources: [
+        artifactsBucket.bucketArn,
+        ...(!props.artifactsPrefix ? [
+          artifactsBucket.arnForObjects('/*'),
+        ] : [
+          artifactsBucket.arnForObjects(`${props.artifactsPrefix}/*`),
+        ]),
+      ],
+    }));
+
     siteBucket.addToResourcePolicy(new PolicyStatement({
       actions: [
         's3:DeleteObject',
@@ -109,8 +141,11 @@ export default class StaticSiteDeployStage extends Stage {
       principals: [deployProject.grantPrincipal],
       resources: [
         siteBucket.bucketArn,
-        siteBucket.arnForObjects(deployPath),
-        siteBucket.arnForObjects(`${deployPath}/*`),
+        ...(!props.deployPrefix ? [
+          siteBucket.arnForObjects('/*'),
+        ] : [
+          siteBucket.arnForObjects(`${props.artifactsPrefix}/*`),
+        ]),
       ],
     }));
   }

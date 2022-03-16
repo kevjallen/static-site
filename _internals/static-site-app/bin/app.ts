@@ -87,20 +87,16 @@ const previewDeployStage = new StaticSiteDeployStage(
   app,
   'StaticSite-PreviewDeploy',
   {
-    artifactsBucketName: buildStage.artifacts.exportValue(
-      buildStage.artifacts.artifactsBucket.bucketName,
-    ),
+    artifactsBucketName: buildStage.artifactsBucketName,
     artifactsPrefix: siteArtifactsPrefix,
     env: {
       account: previewStage.account,
       region: previewStage.region,
     },
-    siteBucketName: previewStage.siteStack.exportValue(
-      previewStage.siteStack.siteBucket.bucketName,
-    ),
-    siteDistributionId: previewStage.siteStack.exportValue(
-      previewStage.siteStack.distribution.distributionId,
-    ),
+    failoverBucketName: previewStage.failoverBucketName,
+    failoverBucketEnv: previewStageProps.siteFailoverEnv,
+    siteBucketName: previewStage.siteBucketName,
+    siteDistributionId: previewStage.distributionId,
   },
 );
 deployPipeline.addStage(previewDeployStage);

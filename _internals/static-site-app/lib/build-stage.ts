@@ -13,19 +13,21 @@ export interface StaticSiteBuildStageProps extends StageProps {
 }
 
 export default class StaticSiteBuildStage extends Stage {
-  public readonly artifacts: StaticSiteArtifactsStack;
-
-  public readonly integration: StaticSiteIntegrationStack;
+  public readonly artifactsBucketName: string;
 
   constructor(scope: Construct, id: string, props: StaticSiteBuildStageProps) {
     super(scope, id, props);
 
-    this.integration = new StaticSiteIntegrationStack(this, 'Integration', {
+    new StaticSiteIntegrationStack(this, 'Integration', {
       env: props.env,
       sourceConnectionArn: props.sourceConnectionArn,
     });
 
-    this.artifacts = new StaticSiteArtifactsStack(this, 'Artifacts');
+    const artifacts = new StaticSiteArtifactsStack(this, 'Artifacts');
+
+    this.artifactsBucketName = artifacts.exportValue(
+      artifacts.artifactsBucket.bucketName,
+    );
 
     if (props?.version) {
       Tags.of(this).add('version', props.version);
