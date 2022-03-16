@@ -132,12 +132,11 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
-    artifactsBucket.addToResourcePolicy(new PolicyStatement({
+    deployProject.addToRolePolicy(new PolicyStatement({
       actions: [
         's3:GetObject',
         's3:ListBucket',
       ],
-      principals: [deployProject.grantPrincipal],
       resources: [
         artifactsBucket.bucketArn,
         ...(!props.artifactsPrefix ? [
@@ -148,24 +147,23 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
-    [siteBucket, siteFailoverBucket].map(
-      (bucket) => bucket?.addToResourcePolicy(new PolicyStatement({
-        actions: [
-          's3:DeleteObject',
-          's3:GetObject',
-          's3:ListBucket',
-          's3:PutObject',
-        ],
-        principals: [deployProject.grantPrincipal],
-        resources: [
-          bucket.bucketArn,
+    deployProject.addToRolePolicy(new PolicyStatement({
+      actions: [
+        's3:DeleteObject',
+        's3:GetObject',
+        's3:ListBucket',
+        's3:PutObject',
+      ],
+      resources: [siteBucket, siteFailoverBucket]
+        .map((bucket) => (!bucket ? [] : [
+          bucket?.bucketArn,
           ...(!props.deployPrefix ? [
-            bucket.arnForObjects('/*'),
+            bucket?.arnForObjects('/*'),
           ] : [
-            bucket.arnForObjects(`${props.artifactsPrefix}/*`),
+            bucket?.arnForObjects(`${props.artifactsPrefix}/*`),
           ]),
-        ],
-      })),
-    );
+        ]))
+        .reduce((flat, resource) => flat.concat(resource)),
+    }));
   }
 }
