@@ -97,6 +97,7 @@ const previewDeployStage = new StaticSiteDeployStage(
     failoverBucketEnv: {
       region: previewStageProps.siteFailoverEnv?.region,
     },
+    projectName: 'static-site-preview-deploy',
     siteBucketName: previewStage.siteBucketName,
     siteDistributionId: previewStage.distributionId,
   },
