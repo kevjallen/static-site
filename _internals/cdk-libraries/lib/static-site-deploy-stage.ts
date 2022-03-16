@@ -90,7 +90,7 @@ export default class StaticSiteDeployStage extends Stage {
         phases: {
           build: {
             commands: [
-              'if [[ "$VERSION" == "latest" ]]; then'
+              'if [ "$VERSION" = "latest" ]; then'
                 + ' VERSION=$(aws s3 ls "$ARTIFACTS_PATH/"'
                 + ' | sort | tail -n 1 | awk \'{print $4}\'); fi',
               'aws s3 cp "$ARTIFACTS_PATH/$VERSION" artifact.zip',
@@ -98,8 +98,8 @@ export default class StaticSiteDeployStage extends Stage {
               'aws s3 rm --recursive "$SITE_DEPLOY_PATH/"',
               'aws s3 sync artifact "$SITE_DEPLOY_PATH/"',
               'if [ ! -z "$FAILOVER_DEPLOY_PATH" ]; then'
-                + ' aws s3 rm --recursive "$FAILOVER_DEPLOY_PATH/";',
-              +' aws s3 sync artifact "$FAILOVER_DEPLOY_PATH/"; fi',
+                + ' aws s3 rm --recursive "$FAILOVER_DEPLOY_PATH/";'
+                + ' aws s3 sync artifact "$FAILOVER_DEPLOY_PATH/"; fi',
               'INVALIDATION=$(aws cloudfront create-invalidation'
                 + ' --distribution-id "$DISTRIBUTION_ID"'
                 + ' --path "$INVALIDATION_PATH"'
