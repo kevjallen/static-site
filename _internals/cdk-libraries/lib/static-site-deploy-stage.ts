@@ -90,7 +90,7 @@ export default class StaticSiteDeployStage extends Stage {
         phases: {
           build: {
             commands: [
-              'if [ "$VERSION" -eq "latest" ]; then'
+              'if [[ "$VERSION" == "latest" ]]; then'
                 + ' VERSION=$(aws s3 ls "$ARTIFACTS_PATH/"'
                 + ' | sort | tail -n 1 | awk \'{print $4}\'); fi',
               'aws s3 cp "$ARTIFACTS_PATH/$VERSION" artifact.zip',
