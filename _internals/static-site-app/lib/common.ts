@@ -44,6 +44,7 @@ export const configFailoverProps: Partial<ApplicationConfigStackProps> = {
 };
 
 export const configRestApiOptions: StageOptions = {
+  cachingEnabled: false,
   stageName: 'api',
 };
 
