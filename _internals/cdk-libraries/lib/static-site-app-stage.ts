@@ -31,6 +31,10 @@ export default class StaticSiteAppStage extends Stage {
 
   public readonly siteBucketName: string;
 
+  public readonly configStack: ApplicationConfigStack | undefined;
+
+  public readonly configFailoverStack: ApplicationConfigStack | undefined;
+
   constructor(scope: Construct, id: string, props?: StaticSiteAppStageProps) {
     super(scope, id, props);
 
@@ -70,18 +74,18 @@ export default class StaticSiteAppStage extends Stage {
     });
 
     if (props?.configProps) {
-      const configStack = new ApplicationConfigStack(
+      this.configStack = new ApplicationConfigStack(
         this,
         'Config',
         props.configProps,
       );
       const primaryEnvOrigin = new HttpOrigin(
-        configStack.getEnvApiDomainName(),
+        this.configStack.getEnvApiDomainName(),
         { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
       );
 
       const primaryFlagsOrigin = new HttpOrigin(
-        configStack.getFlagsApiDomainName(),
+        this.configStack.getFlagsApiDomainName(),
         { originPath: `/${props.configProps.restApiOptions?.stageName || 'prod'}` },
       );
 
@@ -96,7 +100,7 @@ export default class StaticSiteAppStage extends Stage {
       }
 
       if (props.configFailoverProps?.env?.region) {
-        const configFailover = new ApplicationConfigStack(
+        this.configFailoverStack = new ApplicationConfigStack(
           this,
           'ConfigFailover',
           {
@@ -112,17 +116,17 @@ export default class StaticSiteAppStage extends Stage {
         const envApiFailoverDomainParamName = `${
           props.configProps.restApiPrefix}-env-config-failover-domain`;
 
-        new StringParameter(configFailover, 'EnvApiFailoverDomainParam', {
+        new StringParameter(this.configFailoverStack, 'EnvApiFailoverDomainParam', {
           parameterName: envApiFailoverDomainParamName,
-          stringValue: configFailover.getEnvApiDomainName(),
+          stringValue: this.configFailoverStack.getEnvApiDomainName(),
         });
 
         const flagsApiFailoverDomainParamName = `${
           props.configProps.restApiPrefix}-flags-config-failover-domain`;
 
-        new StringParameter(configFailover, 'FlagsApiFailoverDomainParam', {
+        new StringParameter(this.configFailoverStack, 'FlagsApiFailoverDomainParam', {
           parameterName: flagsApiFailoverDomainParamName,
-          stringValue: configFailover.getFlagsApiDomainName(),
+          stringValue: this.configFailoverStack.getFlagsApiDomainName(),
         });
 
         const envApiFailoverDomainReader = new SSMParameterReader(

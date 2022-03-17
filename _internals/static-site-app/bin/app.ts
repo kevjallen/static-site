@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { App, Environment } from 'aws-cdk-lib';
+import { Source, FilterGroup, EventAction } from 'aws-cdk-lib/aws-codebuild';
+import { ApplicationConfigDeployStackProps } from 'cdk-libraries/lib/app-config-deploy-stack';
 import StaticSiteAppStage from 'cdk-libraries/lib/static-site-app-stage';
 import StaticSiteDeployStage from 'cdk-libraries/lib/static-site-deploy-stage';
 import StaticSiteBuildStage from '../lib/build-stage';
-import { siteArtifactsPrefix } from '../lib/common';
+import { siteArtifactsPrefix, sourceRepo } from '../lib/common';
 import previewStageProps from '../lib/env-preview';
 import productionStageProps from '../lib/env-production';
 import StaticSitePipelineStack from '../lib/pipeline-stack';
@@ -33,7 +35,13 @@ const buildPipeline = new StaticSitePipelineStack(
   },
 );
 
+const artifactsBucketParamName = 'static-site-artifacts-bucket';
+
+const releasesBucketParamName = 'static-site-releases-bucket';
+
 const buildStage = new StaticSiteBuildStage(app, 'StaticSite-Build', {
+  artifactsBucketParamName,
+  releasesBucketParamName,
   env: automationEnv,
   sourceConnectionArn,
   version,
@@ -83,23 +91,53 @@ const deployPipeline = new StaticSitePipelineStack(
   },
 );
 
+const previewPathToConfig = '_internals/static-site-config/env/preview.json';
+
+const previewConfigDeployProps: Partial<ApplicationConfigDeployStackProps> = {
+  pathToConfig: previewPathToConfig,
+  source: Source.gitHub({
+    owner: sourceRepo.split('/')[0],
+    repo: sourceRepo.split('/')[1],
+    webhookFilters: [
+      FilterGroup.inEventOf(EventAction.PUSH).andFilePathIs(
+        previewPathToConfig,
+      ),
+    ],
+  }),
+};
+
 const previewDeployStage = new StaticSiteDeployStage(
   app,
   'StaticSite-PreviewDeploy',
   {
-    artifactsBucketName: buildStage.artifactsBucketName,
+    artifactsBucketParamName,
+    artifactsBucketEnv: {
+      account: buildStage.account,
+      region: buildStage.region,
+    },
     artifactsPrefix: siteArtifactsPrefix,
+    configDeployProps: !previewStage.configStack ? undefined : {
+      ...previewConfigDeployProps as ApplicationConfigDeployStackProps,
+      applicationId: previewStage.configStack.applicationId,
+      deployEnvironmentId: previewStage.configStack.environmentId,
+      configProfileId: previewStage.configStack.envConfigProfileId,
+    },
+    configFailoverDeployProps: !previewStage.configFailoverStack ? undefined : {
+      ...previewConfigDeployProps as ApplicationConfigDeployStackProps,
+      applicationId: previewStage.configFailoverStack.applicationId,
+      deployEnvironmentId: previewStage.configFailoverStack.environmentId,
+      configProfileId: previewStage.configFailoverStack.envConfigProfileId,
+      env: previewStageProps.configFailoverProps?.env,
+    },
     env: {
       account: previewStage.account,
       region: previewStage.region,
     },
     failoverBucketParamName: previewStageProps.siteFailoverBucketParamName,
-    failoverBucketEnv: {
-      region: previewStageProps.siteFailoverEnv?.region,
-    },
+    failoverBucketEnv: previewStageProps.siteFailoverEnv,
     projectName: 'static-site-preview-deploy',
     siteBucketName: previewStage.siteBucketName,
     siteDistributionId: previewStage.distributionId,
   },
 );
-deployPipeline.addStage(previewDeployStage);
+deployPipeline.addAutoDisableStage(previewDeployStage, 'Dependencies');

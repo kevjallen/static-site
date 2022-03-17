@@ -1,17 +1,21 @@
 import {
-  Arn,
-  Environment, Stack, Stage, StageProps,
+  Arn, Environment, Stack, Stage, StageProps,
 } from 'aws-cdk-lib';
-import { BuildSpec, Project } from 'aws-cdk-lib/aws-codebuild';
+import { BuildSpec, Project, Source } from 'aws-cdk-lib/aws-codebuild';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
+import ApplicationConfigDeployStack, {
+  ApplicationConfigDeployStackProps,
+} from './app-config-deploy-stack';
 import SSMParameterReader from './ssm-param-reader';
 
 export interface StaticSiteDeployStageProps extends StageProps {
-  artifactsBucketName: string
+  artifactsBucketParamName: string
   artifactsBucketEnv?: Environment
   artifactsPrefix?: string
+  configDeployProps?: ApplicationConfigDeployStackProps
+  configFailoverDeployProps?: ApplicationConfigDeployStackProps
   deployPrefix?: string
   failoverBucketParamName?: string
   failoverBucketEnv?: Environment
@@ -20,25 +24,35 @@ export interface StaticSiteDeployStageProps extends StageProps {
   siteBucketName: string
   siteBucketEnv?: Environment
   siteDistributionId: string
+  source?: Source
 }
 
 export default class StaticSiteDeployStage extends Stage {
   constructor(scope: Construct, id: string, props: StaticSiteDeployStageProps) {
     super(scope, id, props);
 
-    const deployStack = new Stack(this, 'Stack');
+    const siteDeployStack = new Stack(this, 'Site');
+
+    const artifactsBucketParamReader = new SSMParameterReader(
+      siteDeployStack,
+      'ArtifactsBucketNameParamReader',
+      {
+        parameterName: props.artifactsBucketParamName,
+        region: props.artifactsBucketEnv?.region || siteDeployStack.region,
+      },
+    );
 
     const artifactsBucket = Bucket.fromBucketAttributes(
-      deployStack,
+      siteDeployStack,
       'ArtifactsBucket',
       {
         ...props.artifactsBucketEnv,
-        bucketName: props.artifactsBucketName,
+        bucketName: artifactsBucketParamReader.getParameterValue(),
       },
     );
 
     const siteBucket = Bucket.fromBucketAttributes(
-      deployStack,
+      siteDeployStack,
       'SiteBucket',
       {
         ...props.siteBucketEnv,
@@ -48,18 +62,18 @@ export default class StaticSiteDeployStage extends Stage {
 
     let siteFailoverBucket: IBucket | undefined;
 
-    if (props.failoverBucketParamName && props.failoverBucketEnv?.region) {
+    if (props.failoverBucketParamName) {
       const failoverBucketParamReader = new SSMParameterReader(
-        deployStack,
+        siteDeployStack,
         'SiteFailoverBucketNameParamReader',
         {
           parameterName: props.failoverBucketParamName,
-          region: props.failoverBucketEnv.region,
+          region: props.failoverBucketEnv?.region || siteDeployStack.region,
         },
       );
 
       siteFailoverBucket = Bucket.fromBucketAttributes(
-        deployStack,
+        siteDeployStack,
         'SiteFailoverBucket',
         {
           ...props.failoverBucketEnv,
@@ -74,12 +88,13 @@ export default class StaticSiteDeployStage extends Stage {
 
     const failoverDeployPath = siteFailoverBucket?.s3UrlForObject(props.deployPrefix);
 
-    const deployProject = new Project(deployStack, 'DeployProject', {
+    const siteDeployProject = new Project(siteDeployStack, 'DeployProject', {
       environmentVariables: {
         ...(!failoverDeployPath ? {} : {
           FAILOVER_DEPLOY_PATH: { value: failoverDeployPath },
         }),
         ARTIFACTS_PATH: { value: artifactsPath },
+        CONFIG_REFRESH_INTERVAL: { value: 45 },
         DISTRIBUTION_ID: { value: props.siteDistributionId },
         INVALIDATION_PATH: { value: props.invalidationPath || '/*' },
         SITE_DEPLOY_PATH: { value: siteDeployPath },
@@ -114,7 +129,7 @@ export default class StaticSiteDeployStage extends Stage {
       projectName: props.projectName,
     });
 
-    deployProject.addToRolePolicy(new PolicyStatement({
+    siteDeployProject.addToRolePolicy(new PolicyStatement({
       actions: [
         'cloudfront:CreateInvalidation',
         'cloudfront:GetInvalidation',
@@ -132,7 +147,7 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
-    deployProject.addToRolePolicy(new PolicyStatement({
+    siteDeployProject.addToRolePolicy(new PolicyStatement({
       actions: [
         's3:GetObject',
         's3:ListBucket',
@@ -147,7 +162,7 @@ export default class StaticSiteDeployStage extends Stage {
       ],
     }));
 
-    deployProject.addToRolePolicy(new PolicyStatement({
+    siteDeployProject.addToRolePolicy(new PolicyStatement({
       actions: [
         's3:DeleteObject',
         's3:GetObject',
@@ -163,7 +178,23 @@ export default class StaticSiteDeployStage extends Stage {
             bucket?.arnForObjects(`${props.deployPrefix}/*`),
           ]),
         ]))
-        .reduce((flat, resource) => flat.concat(resource)),
+        .reduce((list, resources) => list.concat(resources)),
     }));
+
+    if (props.configDeployProps) {
+      new ApplicationConfigDeployStack(
+        this,
+        'Config',
+        props.configDeployProps,
+      );
+
+      if (props.configFailoverDeployProps) {
+        new ApplicationConfigDeployStack(
+          this,
+          'ConfigFailover',
+          props.configFailoverDeployProps,
+        );
+      }
+    }
   }
 }

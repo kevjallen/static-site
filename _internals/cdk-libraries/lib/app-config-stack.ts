@@ -22,9 +22,17 @@ export interface ApplicationConfigStackProps extends StackProps {
 }
 
 export default class ApplicationConfigStack extends Stack {
-  public readonly envApi: LambdaRestApi;
+  private readonly envApi: LambdaRestApi;
 
-  public readonly flagsApi: LambdaRestApi;
+  private readonly flagsApi: LambdaRestApi;
+
+  public readonly applicationId: string;
+
+  public readonly envConfigProfileId: string;
+
+  public readonly flagsConfigProfileId: string;
+
+  public readonly environmentId: string;
 
   constructor(scope: Construct, id: string, props: ApplicationConfigStackProps) {
     super(scope, id, props);
@@ -33,11 +41,13 @@ export default class ApplicationConfigStack extends Stack {
       name: props.appName,
       description: props.appDescription,
     });
+    this.applicationId = this.exportValue(app.ref);
 
     const env = new CfnEnvironment(this, 'Environment', {
       applicationId: app.ref,
       name: props.envName,
     });
+    this.environmentId = this.exportValue(env.ref);
 
     const flagsProfile = new CfnConfigurationProfile(this, 'FlagsProfile', {
       applicationId: app.ref,
@@ -45,6 +55,7 @@ export default class ApplicationConfigStack extends Stack {
       name: props.flagsProfileName || 'Flags',
       type: 'AWS.AppConfig.FeatureFlags',
     });
+    this.flagsConfigProfileId = this.exportValue(flagsProfile.ref);
 
     const envProfile = new CfnConfigurationProfile(this, 'EnvProfile', {
       applicationId: app.ref,
@@ -52,6 +63,7 @@ export default class ApplicationConfigStack extends Stack {
       name: props.envProfileName || props.envName,
       type: 'AWS.Freeform',
     });
+    this.envConfigProfileId = this.exportValue(envProfile.ref);
 
     const functionCode = Code.fromAsset(`${__dirname}/lambda`);
 
