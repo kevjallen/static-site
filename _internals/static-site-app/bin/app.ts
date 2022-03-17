@@ -106,6 +106,16 @@ const previewConfigDeployProps: Partial<ApplicationConfigDeployStackProps> = {
   }),
 };
 
+const previewConfigDeploySource: Source = Source.gitHub({
+  owner: sourceRepo.split('/')[0],
+  repo: sourceRepo.split('/')[1],
+  webhookFilters: !previewConfigDeployProps.pathToConfig ? [] : [
+    FilterGroup.inEventOf(EventAction.PUSH).andFilePathIs(
+      previewConfigDeployProps.pathToConfig,
+    )
+  ],
+});
+
 const previewDeployStage = new StaticSiteDeployStage(
   app,
   'StaticSite-PreviewDeploy',
@@ -121,6 +131,7 @@ const previewDeployStage = new StaticSiteDeployStage(
       applicationId: previewStage.configStack.applicationId,
       deployEnvironmentId: previewStage.configStack.environmentId,
       configProfileId: previewStage.configStack.envConfigProfileId,
+      source: previewConfigDeploySource,
     },
     configFailoverDeployProps: !previewStage.configFailoverStack ? undefined : {
       ...previewConfigDeployProps as ApplicationConfigDeployStackProps,
@@ -128,6 +139,7 @@ const previewDeployStage = new StaticSiteDeployStage(
       deployEnvironmentId: previewStage.configFailoverStack.environmentId,
       configProfileId: previewStage.configFailoverStack.envConfigProfileId,
       env: previewStageProps.configFailoverProps?.env,
+      source: previewConfigDeploySource,
     },
     env: {
       account: previewStage.account,
