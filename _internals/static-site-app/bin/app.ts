@@ -112,7 +112,7 @@ const previewConfigDeploySource: Source = Source.gitHub({
   webhookFilters: !previewConfigDeployProps.pathToConfig ? [] : [
     FilterGroup.inEventOf(EventAction.PUSH).andFilePathIs(
       previewConfigDeployProps.pathToConfig,
-    )
+    ),
   ],
 });
 
