@@ -44,10 +44,6 @@ export const configFailoverProps: Partial<ApplicationConfigStackProps> = {
 };
 
 export const configRestApiOptions: StageOptions = {
-  cacheClusterEnabled: true,
-  cacheDataEncrypted: true,
-  cacheTtl: Duration.minutes(5),
-  cachingEnabled: true,
   stageName: 'api',
 };
 
